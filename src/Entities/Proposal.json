@@ -1,0 +1,53 @@
+{
+  "name": "Proposal",
+  "type": "object",
+  "properties": {
+    "group_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "full_proposal": {
+      "type": "string",
+      "description": "Full AI-generated or written proposal"
+    },
+    "project_type": {
+      "type": "string",
+      "enum": [
+        "thesis",
+        "project"
+      ]
+    },
+    "field": {
+      "type": "string"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "submitted",
+        "approved",
+        "revision_required",
+        "rejected"
+      ],
+      "default": "draft"
+    },
+    "teacher_feedback": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "group_id",
+    "title"
+  ]
+}

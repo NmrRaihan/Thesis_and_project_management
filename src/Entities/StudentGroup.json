@@ -1,0 +1,46 @@
+{
+  "name": "StudentGroup",
+  "type": "object",
+  "properties": {
+    "group_name": {
+      "type": "string"
+    },
+    "admin_student_id": {
+      "type": "string"
+    },
+    "member_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "project_type": {
+      "type": "string",
+      "enum": [
+        "thesis",
+        "project",
+        "undecided"
+      ],
+      "default": "undecided"
+    },
+    "field_of_interest": {
+      "type": "string"
+    },
+    "assigned_teacher_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "forming",
+        "active",
+        "supervised",
+        "completed"
+      ],
+      "default": "forming"
+    }
+  },
+  "required": [
+    "admin_student_id"
+  ]
+}

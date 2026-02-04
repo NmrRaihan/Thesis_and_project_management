@@ -1,0 +1,45 @@
+{
+  "name": "WeeklyProgress",
+  "type": "object",
+  "properties": {
+    "group_id": {
+      "type": "string"
+    },
+    "week_number": {
+      "type": "number"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "accomplishments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "challenges": {
+      "type": "string"
+    },
+    "next_week_goals": {
+      "type": "string"
+    },
+    "teacher_feedback": {
+      "type": "string"
+    },
+    "progress_percentage": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "group_id",
+    "week_number"
+  ]
+}

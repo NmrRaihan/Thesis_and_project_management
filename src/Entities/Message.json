@@ -1,0 +1,56 @@
+{
+  "name": "Message",
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "string",
+      "description": "Can be group_id for group chat or teacher-group combination"
+    },
+    "conversation_type": {
+      "type": "string",
+      "enum": [
+        "group_chat",
+        "teacher_student"
+      ]
+    },
+    "sender_id": {
+      "type": "string"
+    },
+    "sender_type": {
+      "type": "string",
+      "enum": [
+        "student",
+        "teacher"
+      ]
+    },
+    "sender_name": {
+      "type": "string"
+    },
+    "content": {
+      "type": "string"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "conversation_id",
+    "conversation_type",
+    "sender_id",
+    "content"
+  ]
+}

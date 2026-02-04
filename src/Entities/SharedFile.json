@@ -1,0 +1,51 @@
+{
+  "name": "SharedFile",
+  "type": "object",
+  "properties": {
+    "group_id": {
+      "type": "string"
+    },
+    "uploaded_by": {
+      "type": "string"
+    },
+    "uploader_type": {
+      "type": "string",
+      "enum": [
+        "student",
+        "teacher"
+      ]
+    },
+    "uploader_name": {
+      "type": "string"
+    },
+    "file_name": {
+      "type": "string"
+    },
+    "file_url": {
+      "type": "string"
+    },
+    "file_type": {
+      "type": "string"
+    },
+    "file_size": {
+      "type": "number"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "proposal",
+        "research",
+        "report",
+        "presentation",
+        "other"
+      ],
+      "default": "other"
+    }
+  },
+  "required": [
+    "group_id",
+    "uploaded_by",
+    "file_name",
+    "file_url"
+  ]
+}

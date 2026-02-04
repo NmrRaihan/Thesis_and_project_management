@@ -1,0 +1,73 @@
+{
+  "name": "Teacher",
+  "type": "object",
+  "properties": {
+    "teacher_id": {
+      "type": "string",
+      "description": "Unique teacher identifier"
+    },
+    "password_hash": {
+      "type": "string"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "profile_photo": {
+      "type": "string"
+    },
+    "department": {
+      "type": "string"
+    },
+    "research_field": {
+      "type": "string"
+    },
+    "publications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "year": {
+            "type": "number"
+          },
+          "journal": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "accepted_topics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "max_students": {
+      "type": "number",
+      "default": 10
+    },
+    "current_students_count": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "on_leave",
+        "inactive"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "teacher_id",
+    "password_hash",
+    "full_name"
+  ]
+}

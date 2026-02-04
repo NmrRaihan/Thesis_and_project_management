@@ -1,0 +1,49 @@
+{
+  "name": "Student",
+  "type": "object",
+  "properties": {
+    "student_id": {
+      "type": "string",
+      "description": "Unique student identifier"
+    },
+    "password_hash": {
+      "type": "string",
+      "description": "Hashed password"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "profile_photo": {
+      "type": "string",
+      "description": "URL to profile photo"
+    },
+    "department": {
+      "type": "string"
+    },
+    "group_id": {
+      "type": "string",
+      "description": "Reference to student group"
+    },
+    "is_group_admin": {
+      "type": "boolean",
+      "default": false
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "graduated",
+        "inactive"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "student_id",
+    "password_hash",
+    "full_name"
+  ]
+}

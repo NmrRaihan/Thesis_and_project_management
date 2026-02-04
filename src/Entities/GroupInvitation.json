@@ -1,0 +1,29 @@
+{
+  "name": "GroupInvitation",
+  "type": "object",
+  "properties": {
+    "group_id": {
+      "type": "string"
+    },
+    "from_student_id": {
+      "type": "string"
+    },
+    "to_student_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "accepted",
+        "rejected"
+      ],
+      "default": "pending"
+    }
+  },
+  "required": [
+    "group_id",
+    "from_student_id",
+    "to_student_id"
+  ]
+}

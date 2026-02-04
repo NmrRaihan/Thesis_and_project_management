@@ -1,0 +1,50 @@
+{
+  "name": "Meeting",
+  "type": "object",
+  "properties": {
+    "group_id": {
+      "type": "string"
+    },
+    "teacher_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "scheduled_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "default": 60
+    },
+    "location": {
+      "type": "string"
+    },
+    "meeting_link": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "completed",
+        "cancelled"
+      ],
+      "default": "scheduled"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "group_id",
+    "teacher_id",
+    "title",
+    "scheduled_date"
+  ]
+}
