@@ -37,7 +37,7 @@ import AdminLogin from './Pages/AdminLogin.jsx';
 import AdminDashboard from './Pages/AdminDashboard.jsx';
 
 const AppRouter = () => (
-  <BrowserRouter>
+  <BrowserRouter basename="/Thesis_and_project_management">
     <Routes>
       <Route path="/" element={<Home />} />
       
