@@ -16,15 +16,22 @@ class HybridDatabaseService {
         ? 'https://thesis-and-project-management.onrender.com/api/students'
         : 'http://localhost:5000/api/students';
       
-      // Test if backend is running
+      // Test if backend is running (with timeout for Render spin-up)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        signal: controller.signal
       });
       
-      if (response.ok) {
+      clearTimeout(timeoutId);
+      
+      // 401 Unauthorized is expected for protected routes - it means backend is up
+      if (response.ok || response.status === 401) {
         this.useBackend = true;
         console.log('✅ Backend connected successfully');
       } else {
