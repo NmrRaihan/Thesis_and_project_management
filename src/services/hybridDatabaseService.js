@@ -11,8 +11,13 @@ class HybridDatabaseService {
 
   async checkBackendConnection() {
     try {
+      // Use deployed backend URL in production, localhost in development
+      const apiUrl = import.meta.env.PROD 
+        ? 'https://thesis-and-project-management.onrender.com/api/students'
+        : 'http://localhost:5000/api/students';
+      
       // Test if backend is running
-      const response = await fetch('http://localhost:5000/api/students', {
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
