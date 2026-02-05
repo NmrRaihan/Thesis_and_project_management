@@ -154,8 +154,56 @@ const createAdmin = async (req, res) => {
   }
 };
 
+// @desc    Initialize default admin (public - temporary)
+// @route   POST /api/admin/initialize
+// @access  Public
+const initializeAdmin = async (req, res) => {
+  try {
+    // Check if any admin already exists
+    const existingAdmin = await Admin.findOne({});
+    
+    if (existingAdmin) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admin already exists'
+      });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('admin123', salt);
+
+    // Create admin user
+    const admin = await Admin.create({
+      username: 'admin',
+      email: 'admin@thesisHub.com',
+      password: hashedPassword,
+      role: 'superuser',
+      isActive: true
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Admin user initialized successfully',
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        email: admin.email,
+        role: admin.role
+      }
+    });
+  } catch (error) {
+    console.error('Initialize admin error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error initializing admin'
+    });
+  }
+};
+
 module.exports = {
   loginAdmin,
   getAdminProfile,
-  createAdmin
+  createAdmin,
+  initializeAdmin
 };
