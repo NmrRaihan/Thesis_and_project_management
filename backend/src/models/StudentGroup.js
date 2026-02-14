@@ -12,6 +12,11 @@ const studentGroupSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  leader_student_id: {
+    type: String,
+    required: true,
+    ref: 'Student'
+  },
   members: [{
     student_id: {
       type: String,
@@ -49,6 +54,7 @@ const studentGroupSchema = new mongoose.Schema({
 
 // Indexes for faster queries
 studentGroupSchema.index({ group_id: 1 });
+studentGroupSchema.index({ leader_student_id: 1 });
 studentGroupSchema.index({ supervisor_id: 1 });
 studentGroupSchema.index({ status: 1 });
 
