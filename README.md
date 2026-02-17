@@ -12,7 +12,7 @@ A comprehensive academic platform for managing thesis and project work with stud
 1. Clone or download the project
 2. Navigate to the project directory:
    ```bash
-   cd e:\thesisProject\Practise
+   cd e:\thesisProject\NUB-Thesis-and-Project-Management
    ```
 3. Install dependencies:
    ```bash
