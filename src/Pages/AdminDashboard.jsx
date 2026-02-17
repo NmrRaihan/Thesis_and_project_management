@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import backendAPI from '@/api/backendClient';
+import { db } from '@/services/databaseService';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -57,36 +57,56 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       
-      // Get dashboard stats
-      const statsResponse = await backendAPI.getDashboardStats();
-      if (statsResponse.success) {
-        setStats({
-          students: statsResponse.data.students || 0,
-          teachers: statsResponse.data.teachers || 0,
-          groups: statsResponse.data.groups || 0,
-          proposals: statsResponse.data.proposals || 0
-        });
-      }
+      // Get dashboard stats from hybrid database
+      const [
+        students,
+        teachers,
+        groups,
+        proposals,
+        messages,
+        meetings,
+        tasks,
+        files,
+        progressReports,
+        invitations,
+        supervisionRequests
+      ] = await Promise.all([
+        db.entities.Student.list(),
+        db.entities.Teacher.list(),
+        db.entities.StudentGroup.list(),
+        db.entities.Proposal.list(),
+        db.entities.Message.list(),
+        db.entities.Meeting.list(),
+        db.entities.Task.list(),
+        db.entities.SharedFile.list(),
+        db.entities.WeeklyProgress.list(),
+        db.entities.GroupInvitation.list(),
+        db.entities.SupervisionRequest.list()
+      ]);
+
+      // Set stats
+      setStats({
+        students: students.length,
+        teachers: teachers.length,
+        groups: groups.length,
+        proposals: proposals.length
+      });
       
-      // Get all data
-      const dataResponse = await backendAPI.getAllData();
-      if (dataResponse.success) {
-        // Transform data to match existing structure
-        const transformedData = {
-          'entity_Student': dataResponse.data.students || [],
-          'entity_Teacher': dataResponse.data.teachers || [],
-          'entity_StudentGroup': dataResponse.data.groups || [],
-          'entity_Proposal': dataResponse.data.proposals || [],
-          'entity_Message': dataResponse.data.messages || [],
-          'entity_Meeting': dataResponse.data.meetings || [],
-          'entity_Task': dataResponse.data.tasks || [],
-          'entity_SharedFile': dataResponse.data.files || [],
-          'entity_WeeklyProgress': dataResponse.data.progressReports || [],
-          'entity_GroupInvitation': dataResponse.data.invitations || [],
-          'entity_SupervisionRequest': dataResponse.data.supervisionRequests || []
-        };
-        setDatabaseData(transformedData);
-      }
+      // Transform data to match existing structure
+      const transformedData = {
+        'entity_Student': students,
+        'entity_Teacher': teachers,
+        'entity_StudentGroup': groups,
+        'entity_Proposal': proposals,
+        'entity_Message': messages,
+        'entity_Meeting': meetings,
+        'entity_Task': tasks,
+        'entity_SharedFile': files,
+        'entity_WeeklyProgress': progressReports,
+        'entity_GroupInvitation': invitations,
+        'entity_SupervisionRequest': supervisionRequests
+      };
+      setDatabaseData(transformedData);
     } catch (error) {
       toast.error('Failed to load database data');
       console.error('Error loading database data:', error);
@@ -98,7 +118,68 @@ export default function AdminDashboard() {
   const handleClearAllData = async () => {
     if (window.confirm('Are you sure you want to clear ALL data? This cannot be undone.')) {
       try {
-        await backendAPI.clearAllData();
+        // Clear all data using hybrid database service
+        const [
+          students,
+          teachers,
+          groups,
+          proposals,
+          messages,
+          meetings,
+          tasks,
+          files,
+          progressReports,
+          invitations,
+          supervisionRequests
+        ] = await Promise.all([
+          db.entities.Student.list(),
+          db.entities.Teacher.list(),
+          db.entities.StudentGroup.list(),
+          db.entities.Proposal.list(),
+          db.entities.Message.list(),
+          db.entities.Meeting.list(),
+          db.entities.Task.list(),
+          db.entities.SharedFile.list(),
+          db.entities.WeeklyProgress.list(),
+          db.entities.GroupInvitation.list(),
+          db.entities.SupervisionRequest.list()
+        ]);
+
+        // Delete all records
+        for (const student of students) {
+          await db.entities.Student.delete(student.id);
+        }
+        for (const teacher of teachers) {
+          await db.entities.Teacher.delete(teacher.id);
+        }
+        for (const group of groups) {
+          await db.entities.StudentGroup.delete(group.id);
+        }
+        for (const proposal of proposals) {
+          await db.entities.Proposal.delete(proposal.id);
+        }
+        for (const message of messages) {
+          await db.entities.Message.delete(message.id);
+        }
+        for (const meeting of meetings) {
+          await db.entities.Meeting.delete(meeting.id);
+        }
+        for (const task of tasks) {
+          await db.entities.Task.delete(task.id);
+        }
+        for (const file of files) {
+          await db.entities.SharedFile.delete(file.id);
+        }
+        for (const progressReport of progressReports) {
+          await db.entities.WeeklyProgress.delete(progressReport.id);
+        }
+        for (const invitation of invitations) {
+          await db.entities.GroupInvitation.delete(invitation.id);
+        }
+        for (const supervisionRequest of supervisionRequests) {
+          await db.entities.SupervisionRequest.delete(supervisionRequest.id);
+        }
+
         toast.success('All data cleared successfully');
         loadDatabaseData();
       } catch (error) {
