@@ -69,6 +69,49 @@ const createStudent = async (req, res) => {
   }
 };
 
+// @desc    Get available students for invitation
+// @route   GET /api/students/available-for-invitation
+// @access  Private (student must be authenticated)
+const getAvailableStudentsForInvitation = async (req, res) => {
+  try {
+    // Find the current student to check their group status
+    const currentStudent = await Student.findById(req.user.id);
+    if (!currentStudent) {
+      return res.status(404).json({
+        success: false,
+        message: 'Current student not found'
+      });
+    }
+
+    // Check if current student is a group leader
+    if (!currentStudent.is_group_admin || !currentStudent.group_id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only group leaders can invite students'
+      });
+    }
+
+    // Find students who are not in a group and are active
+    const availableStudents = await Student.find({
+      _id: { $ne: currentStudent._id }, // Exclude current user
+      group_id: { $exists: false, $eq: null }, // Not in a group
+      status: 'active'
+    }).select('student_id full_name email department profile_photo');
+
+    res.status(200).json({
+      success: true,
+      count: availableStudents.length,
+      students: availableStudents
+    });
+  } catch (error) {
+    console.error('Get available students error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching available students'
+    });
+  }
+};
+
 // @desc    Student login
 // @route   POST /api/students/login
 // @access  Public
@@ -131,6 +174,8 @@ const loginStudent = async (req, res) => {
         semester: student.semester,
         gpa: student.gpa,
         group_id: student.group_id,
+        is_group_admin: student.is_group_admin,
+        group_name: student.group_name,
         profile_photo: student.profile_photo
       }
     });
@@ -147,5 +192,6 @@ module.exports = {
   getAllStudents,
   getStudentById,
   createStudent,
-  loginStudent
+  loginStudent,
+  getAvailableStudentsForInvitation
 };

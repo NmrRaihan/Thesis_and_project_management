@@ -322,20 +322,84 @@ export default function StudentDashboard() {
           >
             <h2 className="text-xl font-semibold text-white mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {!group && (
-                <Link to={createPageUrl('SelectPartners')}>
+              {!group && !currentUser?.group_id && (
+                <button onClick={() => navigate('/student/create-group-request')}>
                   <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-blue-400/50">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center group-hover:bg-blue-500 transition-colors">
                         <UserPlus className="w-6 h-6 text-blue-300 group-hover:text-white" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white">Select Partners</h3>
-                        <p className="text-sm text-blue-200">Form your group</p>
+                        <h3 className="font-semibold text-white">Create Group</h3>
+                        <p className="text-sm text-blue-200">Request admin approval</p>
                       </div>
                     </div>
                   </Card>
-                </Link>
+                </button>
+              )}
+              
+              {currentUser?.is_group_admin && currentUser?.group_id && (
+                <button onClick={() => navigate('/student/invite-students')}>
+                  <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-purple-400/50">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:bg-purple-500 transition-colors">
+                        <UserPlus className="w-6 h-6 text-purple-300 group-hover:text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white">Invite Students</h3>
+                        <p className="text-sm text-blue-200">Add members to group</p>
+                      </div>
+                    </div>
+                  </Card>
+                </button>
+              )}
+              
+              {currentUser?.is_group_admin && currentUser?.group_id && (
+                <button onClick={() => navigate('/student/create-group-proposal')}>
+                  <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-emerald-400/50">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center group-hover:bg-emerald-500 transition-colors">
+                        <FileText className="w-6 h-6 text-emerald-300 group-hover:text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white">Create Proposal</h3>
+                        <p className="text-sm text-blue-200">Group research proposal</p>
+                      </div>
+                    </div>
+                  </Card>
+                </button>
+              )}
+              
+              {currentUser?.is_group_admin && currentUser?.group_id && currentUser?.group_name && (
+                <button onClick={() => navigate('/student/request-teachers')}>
+                  <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-amber-400/50">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:bg-amber-500 transition-colors">
+                        <GraduationCap className="w-6 h-6 text-amber-300 group-hover:text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white">Request Teachers</h3>
+                        <p className="text-sm text-blue-200">Find supervisors</p>
+                      </div>
+                    </div>
+                  </Card>
+                </button>
+              )}
+              
+              {!currentUser?.group_id && (
+                <button onClick={() => navigate('/student/group-invitations')}>
+                  <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-amber-400/50">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:bg-amber-500 transition-colors">
+                        <Bell className="w-6 h-6 text-amber-300 group-hover:text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white">Group Invitations</h3>
+                        <p className="text-sm text-blue-200">View pending invites</p>
+                      </div>
+                    </div>
+                  </Card>
+                </button>
               )}
               
               {group && (

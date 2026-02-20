@@ -83,7 +83,9 @@ export const base44 = {
   }
 };
 
-// Initialize with some sample data if empty
+// NOTE: Sample data initialization has been removed to allow for real user data only
+// Uncomment the following code if you need to re-add sample data for testing purposes
+/*
 const initializeSampleData = () => {
   // Add sample teachers
   const teachers = base44.entities.Teacher.getAll();
@@ -140,3 +142,4 @@ const initializeSampleData = () => {
 if (typeof window !== 'undefined') {
   initializeSampleData();
 }
+*/

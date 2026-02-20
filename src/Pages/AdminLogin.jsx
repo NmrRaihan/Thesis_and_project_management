@@ -8,7 +8,7 @@ import AuthCard from '@/components/ui/AuthCard';
 import PageBackground from '@/components/ui/PageBackground';
 import { motion } from 'framer-motion';
 import { Loader2, Eye, EyeOff, ArrowRight, User, Lock, Shield } from 'lucide-react';
-import backendAPI from '@/api/backendClient';
+import { db } from '@/services/databaseService';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -26,17 +26,52 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      const response = await backendAPI.adminLogin(formData.username, formData.password);
-      
-      if (response.success) {
-        // Store admin session
-        localStorage.setItem('adminUser', JSON.stringify(response.admin));
+      // Check for default admin credentials
+      if (formData.username === 'admin' && formData.password === 'admin123') {
+        // Create or update admin session
+        const adminUser = {
+          id: 'admin_default',
+          username: 'admin',
+          email: 'admin@thesisHub.com',
+          role: 'superuser',
+          lastLogin: new Date().toISOString()
+        };
+        
+        localStorage.setItem('adminUser', JSON.stringify(adminUser));
         
         toast.success('Welcome back, Administrator!');
         navigate('/admin/dashboard');
-      } else {
-        toast.error(response.message || 'Invalid credentials');
+        return;
       }
+      
+      // Check if admin exists in localStorage entities (for custom admins)
+      const storedAdmins = localStorage.getItem('entity_Admin');
+      if (storedAdmins) {
+        const admins = JSON.parse(storedAdmins);
+        const matchedAdmin = admins.find(
+          admin => admin.username === formData.username && 
+                  admin.password_hash === formData.password
+        );
+        
+        if (matchedAdmin) {
+          // Create session for matched admin
+          const adminUser = {
+            id: matchedAdmin.id,
+            username: matchedAdmin.username,
+            email: 'admin@thesisHub.com',
+            role: matchedAdmin.role,
+            lastLogin: new Date().toISOString()
+          };
+          
+          localStorage.setItem('adminUser', JSON.stringify(adminUser));
+          
+          toast.success('Welcome back, Administrator!');
+          navigate('/admin/dashboard');
+          return;
+        }
+      }
+      
+      toast.error('Invalid credentials');
     } catch (error) {
       console.error('Login error:', error);
       toast.error(error.message || 'Login failed. Please try again.');

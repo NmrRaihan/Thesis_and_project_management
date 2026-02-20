@@ -68,6 +68,10 @@ class BackendAPI {
     return this.request('/students');
   }
 
+  async getAvailableStudentsForInvitation() {
+    return this.request('/students/available-for-invitation');
+  }
+
   async getStudentById(id) {
     return this.request(`/students/${id}`);
   }

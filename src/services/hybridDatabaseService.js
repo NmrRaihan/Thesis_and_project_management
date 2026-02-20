@@ -56,6 +56,27 @@ class HybridDatabaseService {
     return await base44.entities.Student.list();
   }
 
+  async getAvailableStudentsForInvitation() {
+    if (this.useBackend) {
+      try {
+        const response = await backendAPI.getAvailableStudentsForInvitation();
+        return response.students || [];
+      } catch (error) {
+        console.error('Backend fetch failed, falling back to localStorage:', error);
+        // Fallback to all students from localStorage that are not in a group
+        const allStudents = await base44.entities.Student.list();
+        return allStudents.filter(student => 
+          !student.group_id && student.status === 'active'
+        );
+      }
+    }
+    // For localStorage only: get all students that are not in a group
+    const allStudents = await base44.entities.Student.list();
+    return allStudents.filter(student => 
+      !student.group_id && student.status === 'active'
+    );
+  }
+
   async createStudent(studentData) {
     if (this.useBackend) {
       try {
@@ -297,7 +318,8 @@ export const db = {
       findById: (id) => hybridDB.getStudentById(id),
       create: (data) => hybridDB.createStudent(data),
       update: (id, data) => hybridDB.updateStudent(id, data),
-      delete: (id) => hybridDB.deleteEntity('Student', id)
+      delete: (id) => hybridDB.deleteEntity('Student', id),
+      getAvailableForInvitation: () => hybridDB.getAvailableStudentsForInvitation()
     },
     Teacher: {
       list: () => hybridDB.getTeachers(),

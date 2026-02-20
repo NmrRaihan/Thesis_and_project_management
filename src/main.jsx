@@ -21,11 +21,16 @@ import StudentMeetings from './Pages/StudentMeetings.jsx';
 import StudentTasks from './Pages/StudentTasks.jsx';
 import StudentFiles from './Pages/StudentFiles.jsx';
 import StudentProgress from './Pages/StudentProgress.jsx';
+import CreateGroupRequest from './Pages/CreateGroupRequest.jsx';
+import InviteStudents from './Pages/InviteStudents.jsx';
+import GroupInvitations from './Pages/GroupInvitations.jsx';
+import CreateGroupProposal from './Pages/CreateGroupProposal.jsx';
+import RequestTeachers from './Pages/RequestTeachers.jsx';
+import TeacherRequests from './Pages/TeacherRequests.jsx';
 
 import TeacherLogin from './Pages/TeacherLogin.jsx';
 import TeacherRegister from './Pages/TeacherRegister.jsx';
 import TeacherDashboard from './Pages/TeacherDashboard.jsx';
-import TeacherRequests from './Pages/TeacherRequests.jsx';
 import TeacherMessages from './Pages/TeacherMessages.jsx';
 import TeacherMeetings from './Pages/TeacherMettings.jsx';
 import TeacherFiles from './Pages/TeacherFiles.jsx';
@@ -35,6 +40,10 @@ import TaskBoard from './Pages/TaskBoard.jsx';
 import DatabaseAdmin from './Pages/DatabaseAdmin.jsx';
 import AdminLogin from './Pages/AdminLogin.jsx';
 import AdminDashboard from './Pages/AdminDashboard.jsx';
+import AdminStudentList from './Pages/AdminStudentList.jsx';
+import AdminTeacherList from './Pages/AdminTeacherList.jsx';
+import AdminStudentDetail from './Pages/AdminStudentDetail.jsx';
+import AdminTeacherDetail from './Pages/AdminTeacherDetail.jsx';
 
 const AppRouter = () => (
   <BrowserRouter basename="/Thesis_and_project_management">
@@ -55,6 +64,11 @@ const AppRouter = () => (
       <Route path="/studenttasks" element={<StudentTasks />} />
       <Route path="/studentfiles" element={<StudentFiles />} />
       <Route path="/studentprogress" element={<StudentProgress />} />
+      <Route path="/student/create-group-request" element={<CreateGroupRequest />} />
+      <Route path="/student/invite-students" element={<InviteStudents />} />
+      <Route path="/student/group-invitations" element={<GroupInvitations />} />
+      <Route path="/student/create-group-proposal" element={<CreateGroupProposal />} />
+      <Route path="/student/request-teachers" element={<RequestTeachers />} />
       
       {/* Teacher Routes */}
       <Route path="/teacherlogin" element={<TeacherLogin />} />
@@ -70,6 +84,12 @@ const AppRouter = () => (
       <Route path="/admin/database" element={<DatabaseAdmin />} />
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      <Route path="/admin/students" element={<AdminStudentList />} />
+      <Route path="/admin/teachers" element={<AdminTeacherList />} />
+      <Route path="/admin/student/:id" element={<AdminStudentDetail />} />
+      <Route path="/admin/teacher/:id" element={<AdminTeacherDetail />} />
+      <Route path="/admin/groups" element={<div>Groups Management</div>} />
+      <Route path="/admin/proposals" element={<div>Proposals Management</div>} />
     </Routes>
     <Toaster position="top-right" richColors expand={false} />
   </BrowserRouter>
