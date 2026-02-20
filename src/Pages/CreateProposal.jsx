@@ -312,12 +312,12 @@ export default function CreateProposal() {
               <p className="text-blue-200 mb-6">
                 You need to create or join a group before creating a proposal.
               </p>
-              <a 
-                href={createPageUrl('SelectPartners')}
+              <button
+                onClick={() => navigate(createPageUrl('SelectPartners'))}
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-colors"
               >
                 Select Partners
-              </a>
+              </button>
             </Card>
           </div>
         </DashboardLayout>

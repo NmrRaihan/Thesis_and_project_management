@@ -47,24 +47,62 @@ export default function ChatBubble({ message, isOwn }) {
           
           {message.attachments?.length > 0 && (
             <div className="mt-3 space-y-2">
-              {message.attachments.map((file, idx) => (
-                <a
-                  key={idx}
-                  href={file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    "flex items-center gap-2 p-2 rounded-lg transition-colors",
-                    isOwn 
-                      ? "bg-white/10 hover:bg-white/20" 
-                      : "bg-slate-50 hover:bg-slate-100"
-                  )}
-                >
-                  <FileText className="w-4 h-4" />
-                  <span className="text-xs flex-1 truncate">{file.name}</span>
-                  <Download className="w-3 h-3" />
-                </a>
-              ))}
+              {message.attachments.map((file, idx) => {
+                const isImage = file.type?.startsWith('image/');
+                const isVideo = file.type?.startsWith('video/');
+                
+                if (isImage) {
+                  return (
+                    <div key={idx} className="overflow-hidden rounded-lg border border-slate-200 max-w-xs">
+                      <img
+                        src={file.content}
+                        alt={file.name}
+                        className="w-full h-auto max-h-60 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => window.open(file.content, '_blank')}
+                      />
+                      <div className="p-2 bg-slate-50 text-xs text-slate-600 flex justify-between items-center">
+                        <span className="truncate flex-1 mr-2">{file.name}</span>
+                        <Download className="w-3 h-3 flex-shrink-0" />
+                      </div>
+                    </div>
+                  );
+                } else if (isVideo) {
+                  return (
+                    <div key={idx} className="overflow-hidden rounded-lg border border-slate-200 max-w-xs">
+                      <video
+                        src={file.content}
+                        controls
+                        className="w-full h-auto max-h-60 object-contain"
+                      />
+                      <div className="p-2 bg-slate-50 text-xs text-slate-600 flex justify-between items-center">
+                        <span className="truncate flex-1 mr-2">{file.name}</span>
+                        <Download className="w-3 h-3 flex-shrink-0" />
+                      </div>
+                    </div>
+                  );
+                } else {
+                  // For other file types, show as before
+                  return (
+                    <a
+                      key={idx}
+                      href={file.content}
+                      download={file.name}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        "flex items-center gap-2 p-2 rounded-lg transition-colors",
+                        isOwn 
+                          ? "bg-white/10 hover:bg-white/20" 
+                          : "bg-slate-50 hover:bg-slate-100"
+                      )}
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span className="text-xs flex-1 truncate">{file.name}</span>
+                      <Download className="w-3 h-3" />
+                    </a>
+                  );
+                }
+              })}
             </div>
           )}
         </div>

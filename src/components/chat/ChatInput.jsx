@@ -18,17 +18,28 @@ export default function ChatInput({ onSend, disabled }) {
     const uploaded = [];
 
     for (const file of files) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      // Convert file to base64 for storage in localStorage
+      const fileContent = await readFileAsBase64(file);
       uploaded.push({
         name: file.name,
-        url: file_url,
-        type: file.type
+        content: fileContent,
+        type: file.type,
+        size: file.size
       });
     }
 
     setAttachments([...attachments, ...uploaded]);
     setUploading(false);
     e.target.value = '';
+  };
+
+  const readFileAsBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
   const removeAttachment = (index) => {

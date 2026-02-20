@@ -285,8 +285,13 @@ export default function AdminDashboard() {
         group_id: `GRP-${Date.now()}`,
         group_name: request.group_name,
         group_description: request.group_description,
-        leader_id: request.student_id,
+        leader_student_id: request.student_id,  // Consistent with backend schema
         leader_name: request.student_name,
+        members: [{
+          student_id: request.student_id,
+          full_name: request.student_name,
+          role: 'leader'
+        }],
         member_count: 1,
         max_members: 3,
         status: 'active',

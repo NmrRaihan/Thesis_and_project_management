@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { db } from '@/services/databaseService';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -178,7 +179,7 @@ export default function InviteStudents() {
             <div className="flex justify-between items-center py-6">
               <div className="flex items-center space-x-3">
                 <Button 
-                  onClick={() => navigate('/student/dashboard')} 
+                  onClick={() => navigate(createPageUrl('StudentDashboard'))} 
                   variant="outline" 
                   size="sm"
                   className="bg-white/10 border-white/20 text-white hover:bg-white/20"

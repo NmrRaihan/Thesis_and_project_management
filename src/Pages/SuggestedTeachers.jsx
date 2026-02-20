@@ -50,13 +50,13 @@ export default function SuggestedTeachersEnhanced() {
       const groups = await db.entities.StudentGroup.filter({ group_id: user.group_id });
       if (groups.length > 0) {
         setGroup(groups[0]);
-        
+              
         // Load proposal
         const proposals = await db.entities.Proposal.filter({ group_id: groups[0].id });
         if (proposals.length > 0) {
           setProposal(proposals[0]);
         }
-        
+              
         // Load sent requests
         const requests = await db.entities.SupervisionRequest.filter({ group_id: groups[0].id });
         setSentRequests(requests);

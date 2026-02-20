@@ -21,7 +21,8 @@ import {
   BookOpen,
   Bell,
   Sparkles,
-  Edit3
+  Edit3,
+  GraduationCap
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileEditModal from '@/components/profile/ProfileEditModal';
@@ -45,7 +46,7 @@ export default function StudentDashboard() {
     }
     setCurrentUser(user);
     loadData(user);
-  }, []);
+  }, []); // Only run once on mount
 
   const loadData = async (user) => {
     setLoading(true);
@@ -57,8 +58,13 @@ export default function StudentDashboard() {
         setGroup(groups[0]);
         
         // Load group members
-        const members = await db.entities.Student.filter({ group_id: groups[0].id });
-        setGroupMembers(members);
+        const members = await db.entities.Student.filter({ group_id: groups[0].group_id });
+        // Ensure correct admin status based on group's leader information
+        const updatedMembers = members.map(member => ({
+          ...member,
+          is_group_admin: member.student_id === groups[0].leader_student_id
+        }));
+        setGroupMembers(updatedMembers);
         
         // Load proposal
         const proposals = await db.entities.Proposal.filter({ group_id: groups[0].id });

@@ -95,6 +95,26 @@ export default function GroupInvitations() {
 
       await db.entities.Student.update(student.student_id, updatedStudent);
       
+      // Update the group record to add this student as a member
+      const groups = await db.entities.StudentGroup.filter({ group_id: invitation.group_id });
+      if (groups.length > 0) {
+        const group = groups[0];
+        const updatedMembers = [
+          ...(group.members || []),
+          {
+            student_id: updatedStudent.student_id,
+            full_name: updatedStudent.full_name,
+            role: 'member'
+          }
+        ];
+        
+        await db.entities.StudentGroup.update(group.id, {
+          ...group,
+          members: updatedMembers,
+          member_count: updatedMembers.length
+        });
+      }
+      
       // Update localStorage
       localStorage.setItem('currentUser', JSON.stringify(updatedStudent));
       

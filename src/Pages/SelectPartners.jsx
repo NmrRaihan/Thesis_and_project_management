@@ -51,7 +51,7 @@ export default function SelectPartnersUpdated() {
           setGroup(groups[0]);
           
           // Load group members
-          const members = await db.entities.Student.filter({ group_id: groups[0].id });
+          const members = await db.entities.Student.filter({ group_id: groups[0].group_id });
           setGroupMembers(members);
         }
       }
@@ -92,7 +92,7 @@ export default function SelectPartnersUpdated() {
       // Update student with group_id and leader status
       await db.entities.Student.update(currentUser.id, { 
         group_id: newGroup.id,
-        is_group_admin: 1
+        is_group_admin: true
       });
       
       const updatedUser = { ...currentUser, group_id: newGroup.id, is_group_admin: true };
@@ -163,7 +163,7 @@ export default function SelectPartnersUpdated() {
         const group = groups[0];
         await db.entities.Student.update(currentUser.id, { 
           group_id: group.id,
-          is_group_admin: 0 // Member, not leader
+          is_group_admin: false // Member, not leader
         });
         
         const updatedUser = { ...currentUser, group_id: group.id, is_group_admin: false };
