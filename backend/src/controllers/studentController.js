@@ -94,7 +94,11 @@ const getAvailableStudentsForInvitation = async (req, res) => {
     // Find students who are not in a group and are active
     const availableStudents = await Student.find({
       _id: { $ne: currentStudent._id }, // Exclude current user
-      group_id: { $exists: false, $eq: null }, // Not in a group
+      $or: [
+        { group_id: { $exists: false } }, // group_id field doesn't exist
+        { group_id: null }, // or group_id is null
+        { group_id: '' } // or group_id is empty string
+      ],
       status: 'active'
     }).select('student_id full_name email department profile_photo');
 

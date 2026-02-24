@@ -44,6 +44,9 @@ import AdminStudentList from './Pages/AdminStudentList.jsx';
 import AdminTeacherList from './Pages/AdminTeacherList.jsx';
 import AdminStudentDetail from './Pages/AdminStudentDetail.jsx';
 import AdminTeacherDetail from './Pages/AdminTeacherDetail.jsx';
+import AdminProposalManagement from './Pages/AdminProposalManagement.jsx';
+import AdminGroups from './Pages/AdminGroups.jsx';
+import AdminStudentGroupDetail from './Pages/AdminStudentGroupDetail.jsx';
 
 const AppRouter = () => (
   <BrowserRouter basename="/Thesis_and_project_management">
@@ -88,8 +91,9 @@ const AppRouter = () => (
       <Route path="/admin/teachers" element={<AdminTeacherList />} />
       <Route path="/admin/student/:id" element={<AdminStudentDetail />} />
       <Route path="/admin/teacher/:id" element={<AdminTeacherDetail />} />
-      <Route path="/admin/groups" element={<div>Groups Management</div>} />
-      <Route path="/admin/proposals" element={<div>Proposals Management</div>} />
+      <Route path="/admin/groups" element={<AdminGroups />} />
+      <Route path="/admin/proposals" element={<AdminProposalManagement />} />
+      <Route path="/admin/groups/:groupId" element={<AdminStudentGroupDetail />} />
     </Routes>
     <Toaster position="top-right" richColors expand={false} />
   </BrowserRouter>

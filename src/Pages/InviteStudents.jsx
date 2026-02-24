@@ -49,7 +49,7 @@ export default function InviteStudents() {
   const loadStudents = async () => {
     try {
       // Use the new method to get available students for invitation
-      const availableStudents = await db.entities.Student.getAvailableForInvitation();
+      const availableStudents = await db.entities.Student.getAvailableForInvitation(student);
       setAllStudents(availableStudents);
     } catch (error) {
       console.error('Error loading students:', error);
@@ -57,12 +57,7 @@ export default function InviteStudents() {
       
       // Fallback: try to get all students and filter client-side
       try {
-        const students = await db.entities.Student.list();
-        const availableStudents = students.filter(s => 
-          s.student_id !== student?.student_id && 
-          !s.group_id && 
-          s.status === 'active'
-        );
+        const availableStudents = await db.entities.Student.getAvailableForInvitation(student);
         setAllStudents(availableStudents);
       } catch (fallbackError) {
         console.error('Fallback also failed:', fallbackError);
@@ -217,33 +212,31 @@ export default function InviteStudents() {
                   />
                 </div>
                 
-                {searchTerm && (
-                  <div className="mt-4 space-y-2">
-                    {filteredStudents.length > 0 ? (
-                      filteredStudents.map((student) => (
-                        <div 
-                          key={student.student_id} 
-                          className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10"
-                        >
-                          <div>
-                            <p className="font-medium text-white">{student.full_name}</p>
-                            <p className="text-sm text-blue-200">ID: {student.student_id} • {student.department}</p>
-                          </div>
-                          <Button
-                            onClick={() => handleInvite(student)}
-                            disabled={loading}
-                            className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-                          >
-                            <UserPlus className="w-4 h-4 mr-2" />
-                            Invite
-                          </Button>
+                <div className="mt-4 space-y-2">
+                  {filteredStudents.length > 0 ? (
+                    filteredStudents.map((student) => (
+                      <div 
+                        key={student.student_id} 
+                        className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10"
+                      >
+                        <div>
+                          <p className="font-medium text-white">{student.full_name}</p>
+                          <p className="text-sm text-blue-200">ID: {student.student_id} • {student.department}</p>
                         </div>
-                      ))
-                    ) : (
-                      <p className="text-blue-200 text-center py-4">No students found</p>
-                    )}
-                  </div>
-                )}
+                        <Button
+                          onClick={() => handleInvite(student)}
+                          disabled={loading}
+                          className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                        >
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Invite
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-blue-200 text-center py-4">No students found</p>
+                  )}
+                </div>
               </Card>
 
               {/* Sent Invitations */}
