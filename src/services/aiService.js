@@ -1,12 +1,13 @@
 // services/aiService.js
 // AI Service for integrating with OpenAI API
+import logger from '../utils/logger';
 
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 // Check if API key is available
 if (!OPENAI_API_KEY) {
-  console.warn('OpenAI API key not found. AI features will use mock data.');
+  logger.warn('AIService', 'OpenAI API key not found. AI features will use mock data.');
 }
 
 /**
@@ -43,7 +44,7 @@ const callOpenAI = async (prompt, maxTokens = 500) => {
     const data = await response.json();
     return data.choices[0].message.content.trim();
   } catch (error) {
-    console.error('AI Service Error:', error);
+    logger.error('AIService', 'AI Service Error', error);
     // Fallback to mock data on error
     return mockAIResponse(prompt);
   }

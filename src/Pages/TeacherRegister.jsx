@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { db } from '@/services/databaseService';
+import { databaseService as db } from '@/services/databaseService';
+import bcrypt from 'bcryptjs';
+import logger from '@/utils/logger';
+import { validateEmail, validatePassword, validatePasswordConfirmation, validateId, validateFullName, validateDepartment } from '@/utils/formValidations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,13 +53,40 @@ export default function TeacherRegister() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (formData.password !== formData.confirm_password) {
-      toast.error('Passwords do not match');
+    // Validate all fields
+    const idValidation = validateId(formData.teacher_id, 'Teacher ID');
+    if (!idValidation.valid) {
+      toast.error(idValidation.message);
       return;
     }
 
-    if (formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+    const nameValidation = validateFullName(formData.full_name);
+    if (!nameValidation.valid) {
+      toast.error(nameValidation.message);
+      return;
+    }
+
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.valid) {
+      toast.error(emailValidation.message);
+      return;
+    }
+
+    const deptValidation = validateDepartment(formData.department);
+    if (!deptValidation.valid) {
+      toast.error(deptValidation.message);
+      return;
+    }
+
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.valid) {
+      toast.error(passwordValidation.message);
+      return;
+    }
+
+    const confirmValidation = validatePasswordConfirmation(formData.password, formData.confirm_password);
+    if (!confirmValidation.valid) {
+      toast.error(confirmValidation.message);
       return;
     }
 
@@ -78,6 +108,10 @@ export default function TeacherRegister() {
         }
       }
 
+      // Hash password with bcrypt
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(formData.password, salt);
+
       await db.entities.Teacher.create({
         teacher_id: formData.teacher_id,
         full_name: formData.full_name,
@@ -86,7 +120,7 @@ export default function TeacherRegister() {
         research_field: formData.research_field,
         accepted_topics: formData.accepted_topics,
         max_students: parseInt(formData.max_students),
-        password_hash: formData.password,
+        password_hash: hashedPassword,
         profile_photo: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(formData.full_name)}`,
         publications: [],
         current_students_count: 0,
@@ -98,7 +132,7 @@ export default function TeacherRegister() {
         navigate(createPageUrl('TeacherLogin'));
       }, 1500);
     } catch (error) {
-      console.error('Registration error:', error);
+      logger.error('TeacherRegister', 'Registration failed', error);
       toast.error(error.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);

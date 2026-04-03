@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { db } from '@/services/databaseService';
+import { databaseService as db } from '@/services/databaseService';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,7 @@ export default function InviteStudents() {
     // Check if student is a group leader
     if (!studentData.is_group_admin || !studentData.group_id) {
       toast.error('You must be a group leader to invite students');
-      navigate('/student/dashboard');
+      navigate('/studentdashboard');
       return;
     }
     

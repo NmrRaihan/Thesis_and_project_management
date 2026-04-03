@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '@/services/databaseService';
+import { databaseService as db } from '@/services/databaseService';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,10 +19,22 @@ import {
   Shield,
   Plus,
   Check,
-  X
+  X,
+  Clock,
+  Wifi,
+  WifiOff,
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 import PageBackground from '@/components/ui/PageBackground';
 import { motion } from 'framer-motion';
+import { useRealTimeData } from '@/hooks/useRealTimeData';
+import { handleError, AppError, ErrorTypes, asyncHandler } from '@/utils/errorHandler';
+import { withDatabaseHandling } from '@/utils/databaseErrorHandler';
+
+// Stub functions for backward compatibility (validation is done inline)
+const validateTeacherForm = () => ({ isValid: true, errors: {} });
+const displayErrors = () => null;
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -39,6 +51,8 @@ export default function AdminDashboard() {
     password_hash: '',
     max_students: 10
   });
+  const [teacherFormErrors, setTeacherFormErrors] = useState({});
+  const [touchedFields, setTouchedFields] = useState({});
   const [stats, setStats] = useState({
     students: 0,
     teachers: 0,
@@ -48,6 +62,9 @@ export default function AdminDashboard() {
   const [groupRequests, setGroupRequests] = useState([]);
   const [supervisionRequests, setSupervisionRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+  const [lastRefreshTime, setLastRefreshTime] = useState(null);
+  const [pollingInterval] = useState(10000); // 10 seconds
 
   useEffect(() => {
     // Check if admin is logged in
@@ -58,80 +75,128 @@ export default function AdminDashboard() {
     }
     
     loadDatabaseData();
+    
+    // Cleanup on unmount
+    return () => {
+      // Stop all polling when component unmounts
+      // This will be handled by the useRealTimeData hook automatically
+    };
   }, []);
 
+  // Real-time polling using custom hook
+  const { 
+    data: polledData, 
+    loading: pollingLoading, 
+    error: pollingError,
+    refresh: manualRefresh,
+    isPolling,
+    lastUpdated,
+    pollCount
+  } = useRealTimeData(
+    'admin-dashboard-data',
+    async () => {
+      await loadDatabaseData();
+      setLastRefreshTime(new Date());
+      return true;
+    },
+    autoRefreshEnabled ? pollingInterval : null, // Don't poll if disabled
+    autoRefreshEnabled,
+    {
+      immediate: false, // Don't execute immediately, we already loaded on mount
+      retryOnError: true,
+      maxRetries: 3,
+      onError: (error) => {
+        console.error('[AdminDashboard] Polling error:', error);
+        toast.error('Auto-refresh failed. You can manually refresh.');
+      },
+      onSuccess: () => {
+        // Silent success - no toast for successful auto-refreshs
+      }
+    }
+  );
+
   const loadDatabaseData = async () => {
-    try {
+    return withDatabaseHandling(async () => {
       setLoading(true);
       
-      // Get dashboard stats from hybrid database
-      const [
-        students,
-        teachers,
-        groups,
-        proposals,
-        messages,
-        meetings,
-        tasks,
-        files,
-        progressReports,
-        invitations,
-        supervisionRequests
-      ] = await Promise.all([
-        db.entities.Student.list(),
-        db.entities.Teacher.list(),
-        db.entities.StudentGroup.list(),
-        db.entities.Proposal.list(),
-        db.entities.Message.list(),
-        db.entities.Meeting.list(),
-        db.entities.Task.list(),
-        db.entities.SharedFile.list(),
-        db.entities.WeeklyProgress.list(),
-        db.entities.GroupInvitation.list(),
-        db.entities.SupervisionRequest.list()
-      ]);
+      try {
+        // Get dashboard stats from hybrid database
+        const [
+          students,
+          teachers,
+          groups,
+          proposals,
+          messages,
+          meetings,
+          tasks,
+          files,
+          progressReports,
+          invitations,
+          supervisionRequests
+        ] = await Promise.all([
+          db.entities.Student.list(),
+          db.entities.Teacher.list(),
+          db.entities.StudentGroup.list(),
+          db.entities.Proposal.list(),
+          db.entities.Message.list(),
+          db.entities.Meeting.list(),
+          db.entities.Task.list(),
+          db.entities.SharedFile.list(),
+          db.entities.WeeklyProgress.list(),
+          db.entities.GroupInvitation.list(),
+          db.entities.SupervisionRequest.list()
+        ]);
 
-      // Set stats
-      setStats({
-        students: students.length,
-        teachers: teachers.length,
-        groups: groups.length,
-        proposals: proposals.length
-      });
-      
-      // Filter group creation requests (status = 'pending' and has group_name)
-      const creationRequests = invitations.filter(inv => 
-        inv.status === 'pending' && inv.group_name
-      );
-      setGroupRequests(creationRequests);
-      
-      // Filter supervision requests (status = 'accepted' and pending admin approval)
-      const pendingSupervision = supervisionRequests.filter(req => 
-        req.status === 'accepted'
-      );
-      setSupervisionRequests(pendingSupervision);
-      
-      // Transform data to match existing structure
-      const transformedData = {
-        'entity_Student': students,
-        'entity_Teacher': teachers,
-        'entity_StudentGroup': groups,
-        'entity_Proposal': proposals,
-        'entity_Message': messages,
-        'entity_Meeting': meetings,
-        'entity_Task': tasks,
-        'entity_SharedFile': files,
-        'entity_WeeklyProgress': progressReports,
-        'entity_GroupInvitation': invitations,
-        'entity_SupervisionRequest': supervisionRequests
-      };
-      setDatabaseData(transformedData);
-    } catch (error) {
-      toast.error('Failed to load database data');
-      console.error('Error loading database data:', error);
-    } finally {
-      setLoading(false);
-    }
+        // Set stats
+        setStats({
+          students: students.length,
+          teachers: teachers.length,
+          groups: groups.length,
+          proposals: proposals.length
+        });
+        
+        // Filter group creation requests (status = 'pending' and has group_name)
+        const creationRequests = invitations.filter(inv => 
+          inv.status === 'pending' && inv.group_name
+        );
+        setGroupRequests(creationRequests);
+        
+        // Filter supervision requests (status = 'accepted' and pending admin approval)
+        const pendingSupervision = supervisionRequests.filter(req => 
+          req.status === 'accepted'
+        );
+        setSupervisionRequests(pendingSupervision);
+        
+        // Transform data to match existing structure
+        const transformedData = {
+          'entity_Student': students,
+          'entity_Teacher': teachers,
+          'entity_StudentGroup': groups,
+          'entity_Proposal': proposals,
+          'entity_Message': messages,
+          'entity_Meeting': meetings,
+          'entity_Task': tasks,
+          'entity_SharedFile': files,
+          'entity_WeeklyProgress': progressReports,
+          'entity_GroupInvitation': invitations,
+          'entity_SupervisionRequest': supervisionRequests
+        };
+        setDatabaseData(transformedData);
+        
+        // Update last refresh time
+        setLastRefreshTime(new Date());
+        
+        return {
+          success: true,
+          data: transformedData
+        };
+      } catch (error) {
+        // Re-throw to be caught by withDatabaseHandling
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    }, 'load dashboard data');
   };
 
   const handleClearAllData = async () => {
@@ -397,30 +462,64 @@ export default function AdminDashboard() {
 
   const handleAddTeacher = async (e) => {
     e.preventDefault();
+    
+    // Validate form data
+    const validation = validateTeacherForm(newTeacher);
+    
+    if (!validation.isValid) {
+      setTeacherFormErrors(validation.errors);
+      setTouchedFields(Object.keys(newTeacher).reduce((acc, key) => {
+        acc[key] = true;
+        return acc;
+      }, {}));
+      
+      // Show first error in toast
+      const firstErrorKey = Object.keys(validation.errors)[0];
+      toast.error(validation.errors[firstErrorKey]);
+      return;
+    }
+    
     setAddingTeacher(true);
     
     try {
-      // Validate required fields
-      if (!newTeacher.teacher_id || !newTeacher.full_name || !newTeacher.password_hash) {
-        toast.error('Please fill in all required fields (ID, Name, Password)');
-        setAddingTeacher(false);
-        return;
-      }
-      
       // Check if teacher already exists
       const existing = await db.entities.Teacher.filter({ teacher_id: newTeacher.teacher_id });
       if (existing.length > 0) {
-        toast.error('Teacher ID already exists. Please use a different ID.');
+        const duplicateError = new AppError(
+          'Teacher ID already exists',
+          ErrorTypes.VALIDATION,
+          ErrorSeverity.MEDIUM,
+          { field: 'teacher_id', value: newTeacher.teacher_id }
+        );
+        handleError(duplicateError, 'TeacherCreation', { showToast: false });
+        
+        setTeacherFormErrors(prev => ({
+          ...prev,
+          teacher_id: 'Teacher ID already exists. Please use a different ID.'
+        }));
         setAddingTeacher(false);
         return;
       }
 
-      // Check if email already exists
-      const existingEmail = await db.entities.Teacher.filter({ email: newTeacher.email });
-      if (existingEmail.length > 0) {
-        toast.error('Email already registered. Please use a different email.');
-        setAddingTeacher(false);
-        return;
+      // Check if email already exists (if provided)
+      if (newTeacher.email) {
+        const existingEmail = await db.entities.Teacher.filter({ email: newTeacher.email });
+        if (existingEmail.length > 0) {
+          const duplicateError = new AppError(
+            'Email already registered',
+            ErrorTypes.VALIDATION,
+            ErrorSeverity.MEDIUM,
+            { field: 'email', value: newTeacher.email }
+          );
+          handleError(duplicateError, 'TeacherCreation', { showToast: false });
+          
+          setTeacherFormErrors(prev => ({
+            ...prev,
+            email: 'Email already registered. Please use a different email.'
+          }));
+          setAddingTeacher(false);
+          return;
+        }
       }
       
       // Create teacher through hybrid database
@@ -438,7 +537,10 @@ export default function AdminDashboard() {
         status: 'active'
       };
       
-      await db.entities.Teacher.create(teacherData);
+      await withDatabaseHandling(
+        () => db.entities.Teacher.create(teacherData),
+        'create teacher'
+      );
       
       toast.success('Teacher added successfully!');
       
@@ -452,6 +554,8 @@ export default function AdminDashboard() {
         password_hash: '',
         max_students: 10
       });
+      setTeacherFormErrors({});
+      setTouchedFields({});
       
       // Hide form
       setShowAddTeacherForm(false);
@@ -459,8 +563,8 @@ export default function AdminDashboard() {
       // Refresh data
       loadDatabaseData();
     } catch (error) {
+      // Error is already handled by withDatabaseHandling or specific handlers above
       console.error('Error adding teacher:', error);
-      toast.error('Failed to add teacher. Please try again.');
     } finally {
       setAddingTeacher(false);
     }
@@ -497,14 +601,34 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <div className="flex items-center space-x-3">
+                {/* Auto-refresh toggle */}
                 <Button 
-                  onClick={loadDatabaseData} 
+                  onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
                   variant="outline"
+                  className={`bg-white/10 border-white/20 text-white hover:bg-white/20 ${
+                    autoRefreshEnabled ? 'ring-2 ring-green-500' : ''
+                  }`}
+                  title={autoRefreshEnabled ? 'Auto-refresh enabled' : 'Auto-refresh disabled'}
+                >
+                  {autoRefreshEnabled ? (
+                    <Wifi className="w-4 h-4 mr-2 text-green-400" />
+                  ) : (
+                    <WifiOff className="w-4 h-4 mr-2 text-gray-400" />
+                  )}
+                  {autoRefreshEnabled ? 'Live' : 'Paused'}
+                </Button>
+
+                {/* Manual refresh button */}
+                <Button 
+                  onClick={manualRefresh} 
+                  variant="outline"
+                  disabled={loading || pollingLoading}
                   className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                 >
-                  <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-4 h-4 mr-2 ${(loading || pollingLoading) ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
+                
                 <Button 
                   onClick={handleLogout} 
                   variant="outline"
@@ -570,106 +694,247 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
+        {/* Real-time Status Bar */}
+        <Card className="p-4 bg-white/10 backdrop-blur-xl border border-white/20 mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center space-x-4">
+              <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-full ${
+                autoRefreshEnabled ? 'bg-green-500/20' : 'bg-gray-500/20'
+              }`}>
+                {autoRefreshEnabled ? (
+                  <Wifi className="w-4 h-4 text-green-400" />
+                ) : (
+                  <WifiOff className="w-4 h-4 text-gray-400" />
+                )}
+                <span className={`text-sm font-medium ${
+                  autoRefreshEnabled ? 'text-green-300' : 'text-gray-300'
+                }`}>
+                  {autoRefreshEnabled ? 'Auto-Refresh Active' : 'Auto-Refresh Paused'}
+                </span>
+              </div>
+              
+              {lastRefreshTime && (
+                <div className="flex items-center space-x-2 text-sm text-blue-200">
+                  <Clock className="w-4 h-4" />
+                  <span>Last updated: {lastRefreshTime.toLocaleTimeString()}</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center space-x-4 text-xs text-blue-300">
+              <div className="flex items-center space-x-1">
+                <RefreshCw className={`w-3 h-3 ${pollingLoading ? 'animate-spin' : ''}`} />
+                <span>Refresh #{pollCount || 0}</span>
+              </div>
+              <div className="h-3 w-px bg-blue-400/30"></div>
+              <div>
+                Interval: {pollingInterval / 1000}s
+              </div>
+            </div>
+          </div>
+        </Card>
+
         {/* Add Teacher Form */}
         {showAddTeacherForm && (
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6">
-            <div className="px-6 py-5 border-b border-slate-200">
-              <h2 className="text-lg font-semibold text-slate-900">Add New Teacher</h2>
+          <div className="bg-white/10 backdrop-blur-xl rounded-xl shadow-sm border border-white/20 mb-6">
+            <div className="px-6 py-5 border-b border-white/20">
+              <h2 className="text-lg font-semibold text-white">Add New Teacher</h2>
             </div>
             <div className="p-6">
               <form onSubmit={handleAddTeacher} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="teacher_id" className="text-slate-700">Teacher ID *</Label>
+                    <Label htmlFor="teacher_id" className="text-blue-200">Teacher ID *</Label>
                     <Input
                       id="teacher_id"
                       value={newTeacher.teacher_id}
-                      onChange={(e) => setNewTeacher({...newTeacher, teacher_id: e.target.value})}
+                      onChange={(e) => {
+                        setNewTeacher({...newTeacher, teacher_id: e.target.value});
+                        if (touchedFields.teacher_id) {
+                          const validation = validateTeacherForm({...newTeacher, teacher_id: e.target.value});
+                          setTeacherFormErrors(validation.errors);
+                        }
+                      }}
+                      onBlur={() => {
+                        setTouchedFields({...touchedFields, teacher_id: true});
+                        const validation = validateTeacherForm(newTeacher);
+                        setTeacherFormErrors(validation.errors);
+                      }}
                       placeholder="e.g., T001"
-                      className="h-11 rounded-xl"
+                      className={`h-11 rounded-xl ${teacherFormErrors.teacher_id && touchedFields.teacher_id ? 'border-red-500 focus:ring-red-500' : 'border-white/20 focus:ring-blue-500'}`}
                       required
                     />
+                    {touchedFields.teacher_id && displayErrors(teacherFormErrors, 'teacher_id')}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="full_name" className="text-slate-700">Full Name *</Label>
+                    <Label htmlFor="full_name" className="text-blue-200">Full Name *</Label>
                     <Input
                       id="full_name"
                       value={newTeacher.full_name}
-                      onChange={(e) => setNewTeacher({...newTeacher, full_name: e.target.value})}
+                      onChange={(e) => {
+                        setNewTeacher({...newTeacher, full_name: e.target.value});
+                        if (touchedFields.full_name) {
+                          const validation = validateTeacherForm({...newTeacher, full_name: e.target.value});
+                          setTeacherFormErrors(validation.errors);
+                        }
+                      }}
+                      onBlur={() => {
+                        setTouchedFields({...touchedFields, full_name: true});
+                        const validation = validateTeacherForm(newTeacher);
+                        setTeacherFormErrors(validation.errors);
+                      }}
                       placeholder="e.g., Dr. John Smith"
-                      className="h-11 rounded-xl"
+                      className={`h-11 rounded-xl ${teacherFormErrors.full_name && touchedFields.full_name ? 'border-red-500 focus:ring-red-500' : 'border-white/20 focus:ring-blue-500'}`}
                       required
                     />
+                    {touchedFields.full_name && displayErrors(teacherFormErrors, 'full_name')}
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-slate-700">Email</Label>
+                    <Label htmlFor="email" className="text-blue-200">Email</Label>
                     <Input
                       id="email"
                       type="email"
                       value={newTeacher.email}
-                      onChange={(e) => setNewTeacher({...newTeacher, email: e.target.value})}
+                      onChange={(e) => {
+                        setNewTeacher({...newTeacher, email: e.target.value});
+                        if (touchedFields.email) {
+                          const validation = validateTeacherForm({...newTeacher, email: e.target.value});
+                          setTeacherFormErrors(validation.errors);
+                        }
+                      }}
+                      onBlur={() => {
+                        setTouchedFields({...touchedFields, email: true});
+                        const validation = validateTeacherForm(newTeacher);
+                        setTeacherFormErrors(validation.errors);
+                      }}
                       placeholder="e.g., john.smith@university.edu"
-                      className="h-11 rounded-xl"
+                      className={`h-11 rounded-xl ${teacherFormErrors.email && touchedFields.email ? 'border-red-500 focus:ring-red-500' : 'border-white/20 focus:ring-blue-500'}`}
                     />
+                    {touchedFields.email && displayErrors(teacherFormErrors, 'email')}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="department" className="text-slate-700">Department</Label>
+                    <Label htmlFor="department" className="text-blue-200">Department</Label>
                     <Input
                       id="department"
                       value={newTeacher.department}
-                      onChange={(e) => setNewTeacher({...newTeacher, department: e.target.value})}
+                      onChange={(e) => {
+                        setNewTeacher({...newTeacher, department: e.target.value});
+                        if (touchedFields.department) {
+                          const validation = validateTeacherForm({...newTeacher, department: e.target.value});
+                          setTeacherFormErrors(validation.errors);
+                        }
+                      }}
+                      onBlur={() => {
+                        setTouchedFields({...touchedFields, department: true});
+                        const validation = validateTeacherForm(newTeacher);
+                        setTeacherFormErrors(validation.errors);
+                      }}
                       placeholder="e.g., Computer Science"
-                      className="h-11 rounded-xl"
+                      className={`h-11 rounded-xl ${teacherFormErrors.department && touchedFields.department ? 'border-red-500 focus:ring-red-500' : 'border-white/20 focus:ring-blue-500'}`}
                     />
+                    {touchedFields.department && displayErrors(teacherFormErrors, 'department')}
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="research_field" className="text-slate-700">Research Field</Label>
+                    <Label htmlFor="research_field" className="text-blue-200">Research Field</Label>
                     <Input
                       id="research_field"
                       value={newTeacher.research_field}
-                      onChange={(e) => setNewTeacher({...newTeacher, research_field: e.target.value})}
+                      onChange={(e) => {
+                        setNewTeacher({...newTeacher, research_field: e.target.value});
+                        if (touchedFields.research_field) {
+                          const validation = validateTeacherForm({...newTeacher, research_field: e.target.value});
+                          setTeacherFormErrors(validation.errors);
+                        }
+                      }}
+                      onBlur={() => {
+                        setTouchedFields({...touchedFields, research_field: true});
+                        const validation = validateTeacherForm(newTeacher);
+                        setTeacherFormErrors(validation.errors);
+                      }}
                       placeholder="e.g., Artificial Intelligence"
-                      className="h-11 rounded-xl"
+                      className={`h-11 rounded-xl ${teacherFormErrors.research_field && touchedFields.research_field ? 'border-red-500 focus:ring-red-500' : 'border-white/20 focus:ring-blue-500'}`}
                     />
+                    {touchedFields.research_field && displayErrors(teacherFormErrors, 'research_field')}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="max_students" className="text-slate-700">Max Students</Label>
+                    <Label htmlFor="max_students" className="text-blue-200">Max Students</Label>
                     <Input
                       id="max_students"
                       type="number"
                       min="1"
                       max="50"
                       value={newTeacher.max_students}
-                      onChange={(e) => setNewTeacher({...newTeacher, max_students: parseInt(e.target.value) || 10})}
-                      className="h-11 rounded-xl"
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 10;
+                        setNewTeacher({...newTeacher, max_students: value});
+                        if (touchedFields.max_students) {
+                          const validation = validateTeacherForm({...newTeacher, max_students: value});
+                          setTeacherFormErrors(validation.errors);
+                        }
+                      }}
+                      onBlur={() => {
+                        setTouchedFields({...touchedFields, max_students: true});
+                        const validation = validateTeacherForm(newTeacher);
+                        setTeacherFormErrors(validation.errors);
+                      }}
+                      className={`h-11 rounded-xl ${teacherFormErrors.max_students && touchedFields.max_students ? 'border-red-500 focus:ring-red-500' : 'border-white/20 focus:ring-blue-500'}`}
                     />
+                    {touchedFields.max_students && displayErrors(teacherFormErrors, 'max_students')}
                   </div>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="password_hash" className="text-slate-700">Password *</Label>
+                  <Label htmlFor="password_hash" className="text-blue-200">Password *</Label>
                   <Input
                     id="password_hash"
                     type="password"
                     value={newTeacher.password_hash}
-                    onChange={(e) => setNewTeacher({...newTeacher, password_hash: e.target.value})}
+                    onChange={(e) => {
+                      setNewTeacher({...newTeacher, password_hash: e.target.value});
+                      if (touchedFields.password_hash) {
+                        const validation = validateTeacherForm({...newTeacher, password_hash: e.target.value});
+                        setTeacherFormErrors(validation.errors);
+                      }
+                    }}
+                    onBlur={() => {
+                      setTouchedFields({...touchedFields, password_hash: true});
+                      const validation = validateTeacherForm(newTeacher);
+                      setTeacherFormErrors(validation.errors);
+                    }}
                     placeholder="Password for teacher login"
-                    className="h-11 rounded-xl"
+                    className={`h-11 rounded-xl ${teacherFormErrors.password_hash && touchedFields.password_hash ? 'border-red-500 focus:ring-red-500' : 'border-white/20 focus:ring-blue-500'}`}
                     required
                   />
+                  {touchedFields.password_hash && displayErrors(teacherFormErrors, 'password_hash')}
+                  <p className="text-xs text-blue-300 mt-1">
+                    💡 Password should be at least 6 characters long
+                  </p>
                 </div>
                 
                 <div className="flex justify-end space-x-3 pt-4">
                   <Button 
                     type="button" 
                     variant="outline" 
-                    onClick={() => setShowAddTeacherForm(false)}
+                    onClick={() => {
+                      setShowAddTeacherForm(false);
+                      setNewTeacher({
+                        teacher_id: '',
+                        full_name: '',
+                        email: '',
+                        department: '',
+                        research_field: '',
+                        password_hash: '',
+                        max_students: 10
+                      });
+                      setTeacherFormErrors({});
+                      setTouchedFields({});
+                    }}
                     className="h-11 rounded-xl"
                   >
                     Cancel

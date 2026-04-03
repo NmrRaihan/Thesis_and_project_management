@@ -60,7 +60,7 @@ export default function TaskBoard() {
       setTasks(teacherTasks);
       
       // Load all groups supervised by this teacher
-      const teacherGroups = await base44.entities.StudentGroup.filter({ supervisor_teacher_id: user.teacher_id });
+      const teacherGroups = await base44.entities.StudentGroup.filter({ assigned_teacher_id: user.teacher_id });
       setGroups(teacherGroups);
     } catch (error) {
       console.error('Error loading tasks:', error);
@@ -127,19 +127,19 @@ export default function TaskBoard() {
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'high': return 'bg-red-500/20 text-red-300 border-red-400/30';
+      case 'medium': return 'bg-yellow-500/20 text-yellow-300 border-yellow-400/30';
+      case 'low': return 'bg-green-500/20 text-green-300 border-green-400/30';
+      default: return 'bg-slate-500/20 text-slate-300 border-slate-400/30';
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'todo': return 'bg-gray-100 text-gray-800';
-      case 'in_progress': return 'bg-blue-100 text-blue-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'todo': return 'bg-slate-500/20 text-slate-300 border-slate-400/30';
+      case 'in_progress': return 'bg-blue-500/20 text-blue-300 border-blue-400/30';
+      case 'completed': return 'bg-green-500/20 text-green-300 border-green-400/30';
+      default: return 'bg-slate-500/20 text-slate-300 border-slate-400/30';
     }
   };
 
@@ -319,18 +319,18 @@ export default function TaskBoard() {
                   <Card className="p-4 border-l-4 border-l-gray-400 bg-white/10 backdrop-blur border border-white/20">
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="font-medium text-white">{task.title}</h3>
-                      <Badge className="bg-white/20 text-white border-white/30">
+                      <Badge className={getPriorityColor(task.priority)}>
                         {task.priority}
                       </Badge>
                     </div>
                     
                     {task.description && (
-                      <p className="text-sm text-slate-600 mb-3 line-clamp-2">
+                      <p className="text-sm text-blue-200/80 mb-3 line-clamp-2">
                         {task.description}
                       </p>
                     )}
                     
-                    <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
+                    <div className="flex items-center justify-between text-xs text-blue-200/70 mb-3">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
@@ -390,18 +390,18 @@ export default function TaskBoard() {
                   <Card className="p-4 border-l-4 border-l-blue-500 bg-white/10 backdrop-blur border border-white/20">
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="font-medium text-white">{task.title}</h3>
-                      <Badge className="bg-white/20 text-white border-white/30">
+                      <Badge className={getPriorityColor(task.priority)}>
                         {task.priority}
                       </Badge>
                     </div>
                     
                     {task.description && (
-                      <p className="text-sm text-slate-600 mb-3 line-clamp-2">
+                      <p className="text-sm text-blue-200/80 mb-3 line-clamp-2">
                         {task.description}
                       </p>
                     )}
                     
-                    <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
+                    <div className="flex items-center justify-between text-xs text-blue-200/70 mb-3">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
@@ -461,18 +461,18 @@ export default function TaskBoard() {
                   <Card className="p-4 border-l-4 border-l-green-500 bg-white/10 backdrop-blur border border-white/20">
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="font-medium text-white line-through">{task.title}</h3>
-                      <Badge className="bg-white/20 text-white border-white/30">
+                      <Badge className={getPriorityColor(task.priority)}>
                         {task.priority}
                       </Badge>
                     </div>
                     
                     {task.description && (
-                      <p className="text-sm text-slate-600 mb-3 line-clamp-2">
+                      <p className="text-sm text-blue-200/80 mb-3 line-clamp-2">
                         {task.description}
                       </p>
                     )}
                     
-                    <div className="flex items-center justify-between text-xs text-slate-500 mb-3">
+                    <div className="flex items-center justify-between text-xs text-blue-200/70 mb-3">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}

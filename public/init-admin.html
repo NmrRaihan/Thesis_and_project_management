@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Initialize Admin Account</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 { color: #667eea; }
+        .success { 
+            background: #4CAF50; 
+            color: white; 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin: 20px 0;
+        }
+        .info {
+            background: #2196F3;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #764ba2;
+        }
+        .credentials {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            color: #333;
+        }
+        .credentials strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Initialize Admin Account</h1>
+        
+        <div id="message"></div>
+        
+        <div class="info">
+            <strong>⚠️ Important:</strong> This page will add an admin account to your browser's localStorage.
+            After running this, you can login to the admin panel.
+        </div>
+        
+        <button onclick="initializeAdmin()">✅ Initialize Admin Account</button>
+        <button onclick="goToLogin()">🚀 Go to Login Page</button>
+        
+        <div class="credentials" id="credentials" style="display:none;">
+            <h3>Your Admin Credentials:</h3>
+            <p><strong>Username:</strong> admin</p>
+            <p><strong>Password:</strong> admin547</p>
+            <p><em>Save these credentials securely!</em></p>
+        </div>
+    </div>
+
+    <script>
+        function initializeAdmin() {
+            // Create admin account
+            const adminAccount = {
+                id: "admin_" + Date.now(),
+                created_at: new Date().toISOString(),
+                username: "admin",
+                password_hash: "admin547", // Plain text for now
+                password_plain: "admin547", // Also store as plain text for compatibility
+                role: "superuser"
+            };
+
+            // Get existing admins or create new array
+            let admins = [];
+            const existing = localStorage.getItem('entity_Admin');
+            if (existing) {
+                try {
+                    admins = JSON.parse(existing);
+                } catch(e) {
+                    admins = [];
+                }
+            }
+
+            // Add new admin
+            admins.push(adminAccount);
+
+            // Save to localStorage
+            localStorage.setItem('entity_Admin', JSON.stringify(admins));
+
+            // Show success message
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = '<div class="success">✅ Admin account created successfully!</div>';
+            
+            // Show credentials
+            document.getElementById('credentials').style.display = 'block';
+
+            console.log('✅ Admin initialized:', adminAccount);
+            console.log('Current admins in localStorage:', admins);
+
+            // Auto redirect after 3 seconds
+            setTimeout(() => {
+                goToLogin();
+            }, 3000);
+        }
+
+        function goToLogin() {
+            window.location.href = '/Thesis_and_project_management/admin/login';
+        }
+
+        // Check if admin already exists
+        window.onload = function() {
+            const existing = localStorage.getItem('entity_Admin');
+            if (existing) {
+                try {
+                    const admins = JSON.parse(existing);
+                    const hasAdmin = admins.some(a => a.username === 'admin');
+                    if (hasAdmin) {
+                        document.getElementById('message').innerHTML = 
+                            '<div class="info">ℹ️ Admin account already exists. You can proceed to login.</div>';
+                    }
+                } catch(e) {}
+            }
+        };
+    </script>
+</body>
+</html>

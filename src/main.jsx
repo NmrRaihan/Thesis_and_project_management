@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import './index.css';
+import ErrorBoundary from './utils/ErrorBoundary';
 import './initializeAdminData.js';
 
 // Pages
@@ -32,7 +33,7 @@ import TeacherLogin from './Pages/TeacherLogin.jsx';
 import TeacherRegister from './Pages/TeacherRegister.jsx';
 import TeacherDashboard from './Pages/TeacherDashboard.jsx';
 import TeacherMessages from './Pages/TeacherMessages.jsx';
-import TeacherMeetings from './Pages/TeacherMettings.jsx';
+import TeacherMeetings from './Pages/TeacherMeetings.jsx';
 import TeacherFiles from './Pages/TeacherFiles.jsx';
 import MyStudents from './Pages/MyStudents.jsx';
 import ProgressTracker from './Pages/ProgressTracker.jsx';
@@ -101,6 +102,8 @@ const AppRouter = () => (
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AppRouter />
+    <ErrorBoundary>
+      <AppRouter />
+    </ErrorBoundary>
   </React.StrictMode>,
 );

@@ -75,11 +75,16 @@ export default function TeacherMessages() {
   };
 
   useEffect(() => {
+    let intervalId;
+    
     if (selectedGroup) {
       loadMessages();
-      const interval = setInterval(loadMessages, 5000);
-      return () => clearInterval(interval);
+      intervalId = setInterval(loadMessages, 5000);
     }
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [selectedGroup]);
 
   const loadMessages = async () => {

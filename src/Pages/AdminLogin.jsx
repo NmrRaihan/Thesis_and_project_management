@@ -8,7 +8,8 @@ import AuthCard from '@/components/ui/AuthCard';
 import PageBackground from '@/components/ui/PageBackground';
 import { motion } from 'framer-motion';
 import { Loader2, Eye, EyeOff, ArrowRight, User, Lock, Shield } from 'lucide-react';
-import { db } from '@/services/databaseService';
+import { databaseService as db } from '@/services/databaseService';
+import logger from '@/utils/logger';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -26,55 +27,77 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      // Check for default admin credentials
-      if (formData.username === 'admin' && formData.password === 'admin123') {
-        // Create or update admin session
-        const adminUser = {
-          id: 'admin_default',
-          username: 'admin',
-          email: 'admin@thesisHub.com',
-          role: 'superuser',
-          lastLogin: new Date().toISOString()
-        };
-        
-        localStorage.setItem('adminUser', JSON.stringify(adminUser));
-        
-        toast.success('Welcome back, Administrator!');
-        navigate('/admin/dashboard');
+      // Validate input
+      if (!formData.username || !formData.password) {
+        toast.error('Please enter both username and password');
+        setLoading(false);
         return;
       }
-      
-      // Check if admin exists in localStorage entities (for custom admins)
+
+      // Check if admin exists in localStorage entities
       const storedAdmins = localStorage.getItem('entity_Admin');
-      if (storedAdmins) {
-        const admins = JSON.parse(storedAdmins);
-        const matchedAdmin = admins.find(
-          admin => admin.username === formData.username && 
-                  admin.password_hash === formData.password
-        );
-        
-        if (matchedAdmin) {
-          // Create session for matched admin
-          const adminUser = {
-            id: matchedAdmin.id,
-            username: matchedAdmin.username,
-            email: 'admin@thesisHub.com',
-            role: matchedAdmin.role,
-            lastLogin: new Date().toISOString()
-          };
-          
-          localStorage.setItem('adminUser', JSON.stringify(adminUser));
-          
-          toast.success('Welcome back, Administrator!');
-          navigate('/admin/dashboard');
-          return;
+      if (!storedAdmins) {
+        toast.error('No admin accounts found. Please create an admin account first.');
+        setLoading(false);
+        return;
+      }
+
+      const admins = JSON.parse(storedAdmins);
+      
+      // Find admin by username
+      const matchedAdmin = admins.find(
+        admin => admin.username === formData.username
+      );
+
+      if (!matchedAdmin) {
+        toast.error('Invalid credentials');
+        setLoading(false);
+        return;
+      }
+
+      // Verify password with bcrypt comparison
+      let passwordMatch = false;
+      
+      if (matchedAdmin.password_hash) {
+        // If it's a bcrypt hash (starts with $2)
+        if (matchedAdmin.password_hash.startsWith('$2')) {
+          try {
+            passwordMatch = await bcrypt.compare(formData.password, matchedAdmin.password_hash);
+          } catch (error) {
+            logger.error('AdminLogin', 'Bcrypt compare error', error);
+            // Fallback to plain text check
+            passwordMatch = formData.password === matchedAdmin.password_plain || 
+                           formData.password === matchedAdmin.password_hash;
+          }
+        } else {
+          // Plain text password or direct match
+          passwordMatch = formData.password === matchedAdmin.password_hash || 
+                         formData.password === matchedAdmin.password_plain;
         }
       }
+
+      if (!passwordMatch) {
+        toast.error('Invalid credentials');
+        setLoading(false);
+        return;
+      }
+
+      // Create session for authenticated admin
+      const adminUser = {
+        id: matchedAdmin.id || matchedAdmin._id || `admin_${Date.now()}`,
+        username: matchedAdmin.username,
+        email: matchedAdmin.email || 'admin@thesisHub.com',
+        role: matchedAdmin.role || 'admin',
+        lastLogin: new Date().toISOString()
+      };
       
-      toast.error('Invalid credentials');
+      localStorage.setItem('adminUser', JSON.stringify(adminUser));
+      
+      toast.success('Welcome back, Administrator!');
+      navigate('/admin/dashboard');
     } catch (error) {
-      console.error('Login error:', error);
-      toast.error(error.message || 'Login failed. Please try again.');
+      logger.error('AdminLogin', 'Login failed', error);
+      toast.error('Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -184,7 +207,7 @@ export default function AdminLogin() {
               </motion.div>
 
               <div className="text-center text-sm text-blue-200">
-                <p>Default credentials: admin / admin123</p>
+                <p>Contact your system administrator for credentials</p>
               </div>
             </form>
           </div>

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { db } from '@/services/databaseService';
+import { databaseService as db } from '@/services/databaseService';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import TeacherCard from '@/components/cards/TeacherCard';
 import { Card } from '@/components/ui/card';
@@ -73,6 +73,12 @@ export default function SuggestedTeachersEnhanced() {
     // Check if user is the group leader
     if (group.leader_student_id !== currentUser.student_id) {
       toast.error('Only the group leader can send supervision requests');
+      return;
+    }
+    
+    // Check if proposal has been approved by admin
+    if (!proposal || proposal.status !== 'approved') {
+      toast.error('Your proposal must be approved by admin before requesting a supervisor');
       return;
     }
     
@@ -237,6 +243,10 @@ export default function SuggestedTeachersEnhanced() {
                       }
                       if (!proposal) {
                         toast.error('You need to create a proposal first');
+                        return;
+                      }
+                      if (proposal.status !== 'approved') {
+                        toast.error('Your proposal must be approved by admin before requesting a supervisor');
                         return;
                       }
                       setSelectedTeacher(teacher);

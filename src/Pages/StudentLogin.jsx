@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { db } from '@/services/databaseService';
+import { databaseService as db } from '@/services/databaseService';
+import bcrypt from 'bcryptjs';
+import logger from '@/utils/logger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,7 +39,25 @@ export default function StudentLogin() {
 
       const student = students[0];
       
-      if (student.password_hash !== formData.password) {
+      // Verify password with bcrypt comparison
+      let passwordMatch = false;
+      
+      if (student.password_hash) {
+        // If it's a bcrypt hash (starts with $2), use bcrypt compare
+        if (student.password_hash.startsWith('$2')) {
+          try {
+            passwordMatch = await bcrypt.compare(formData.password, student.password_hash);
+          } catch (error) {
+            logger.error('StudentLogin', 'Bcrypt compare error', error);
+            passwordMatch = false;
+          }
+        } else {
+          // Plain text password (legacy support for existing accounts)
+          passwordMatch = formData.password === student.password_hash;
+        }
+      }
+
+      if (!passwordMatch) {
         toast.error('Invalid password. Please try again.');
         setLoading(false);
         return;
@@ -52,7 +72,7 @@ export default function StudentLogin() {
         navigate(createPageUrl('StudentDashboard'));
       }, 500);
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('StudentLogin', 'Login failed', error);
       if (error.message) {
         toast.error(`Login failed: ${error.message}`);
       } else {

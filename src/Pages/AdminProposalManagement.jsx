@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '@/services/databaseService';
+import { createPageUrl } from '@/utils';
+import { databaseService as db } from '@/services/databaseService';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,7 @@ import {
   Calendar
 } from 'lucide-react';
 import PageBackground from '@/components/ui/PageBackground';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
 export default function AdminProposalManagement() {
   const navigate = useNavigate();
@@ -35,7 +37,7 @@ export default function AdminProposalManagement() {
     // Check if admin is logged in
     const adminUser = localStorage.getItem('adminUser');
     if (!adminUser) {
-      navigate('/admin/login');
+      navigate(createPageUrl('AdminLogin'));
       return;
     }
 
@@ -64,29 +66,31 @@ export default function AdminProposalManagement() {
   const getStatusBadgeVariant = (status) => {
     switch (status) {
       case 'approved':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-green-500/20 text-green-300 border-green-400/30';
       case 'rejected':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-red-500/20 text-red-300 border-red-400/30';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-yellow-500/20 text-yellow-300 border-yellow-400/30';
       case 'submitted':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'pending_admin_approval':
+        return 'bg-blue-500/20 text-blue-300 border-blue-400/30';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-slate-500/20 text-slate-300 border-slate-400/30';
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
       case 'approved':
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
+        return <CheckCircle className="w-4 h-4 text-green-400" />;
       case 'rejected':
-        return <XCircle className="w-4 h-4 text-red-600" />;
+        return <XCircle className="w-4 h-4 text-red-400" />;
       case 'pending':
       case 'submitted':
-        return <Clock className="w-4 h-4 text-yellow-600" />;
+      case 'pending_admin_approval':
+        return <Clock className="w-4 h-4 text-yellow-400" />;
       default:
-        return <AlertTriangle className="w-4 h-4 text-gray-600" />;
+        return <AlertTriangle className="w-4 h-4 text-slate-400" />;
     }
   };
 
@@ -118,6 +122,46 @@ export default function AdminProposalManagement() {
     setSelectedProposal(null);
   };
 
+  const handleApproveProposal = async (proposalId) => {
+    try {
+      // Update proposal status to approved
+      await db.entities.Proposal.update(proposalId, {
+        status: 'approved',
+        approved_at: new Date().toISOString()
+      });
+      
+      toast.success('Proposal approved successfully! Students can now select a supervisor.');
+      
+      // Close the modal and refresh the proposals list
+      closeProposalModal();
+      loadProposals();
+    } catch (error) {
+      console.error('Error approving proposal:', error);
+      toast.error('Failed to approve proposal');
+    }
+  };
+
+  const handleRejectProposal = async (proposalId) => {
+    if (window.confirm('Are you sure you want to reject this proposal?')) {
+      try {
+        // Update proposal status to rejected
+        await db.entities.Proposal.update(proposalId, {
+          status: 'rejected',
+          rejected_at: new Date().toISOString()
+        });
+        
+        toast.success('Proposal rejected');
+        
+        // Close the modal and refresh the proposals list
+        closeProposalModal();
+        loadProposals();
+      } catch (error) {
+        console.error('Error rejecting proposal:', error);
+        toast.error('Failed to reject proposal');
+      }
+    }
+  };
+
   const handleDeleteProposal = async (proposalId) => {
     if (window.confirm('Are you sure you want to delete this proposal? This action cannot be undone.')) {
       try {
@@ -146,32 +190,33 @@ export default function AdminProposalManagement() {
 
   return (
     <PageBackground>
-      <div className="min-h-screen relative z-10">
-        {/* Header */}
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-t-2xl">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-white" />
+      <DashboardLayout userType="admin" currentPage="AdminProposalManagement">
+        <div className="min-h-screen relative z-10">
+          {/* Header */}
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-t-2xl">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center py-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-white">Proposal Management</h1>
+                    <p className="text-orange-200">Manage student thesis/project proposals</p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-white">Proposal Management</h1>
-                  <p className="text-orange-200">Manage student thesis/project proposals</p>
-                </div>
+                <Button 
+                  onClick={() => navigate(createPageUrl('AdminDashboard'))}
+                  variant="outline"
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                >
+                  Back to Dashboard
+                </Button>
               </div>
-              <Button 
-                onClick={() => navigate('/admin/dashboard')}
-                variant="outline"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-              >
-                Back to Dashboard
-              </Button>
             </div>
           </div>
-        </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20">
@@ -479,6 +524,25 @@ export default function AdminProposalManagement() {
                   <Edit className="w-4 h-4 mr-2" />
                   Edit
                 </Button>
+                {selectedProposal.status === 'pending_admin_approval' && (
+                  <>
+                    <Button
+                      onClick={() => handleApproveProposal(selectedProposal.id)}
+                      className="bg-green-500/20 border-green-400/30 text-green-200 hover:bg-green-500/30"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Approve
+                    </Button>
+                    <Button
+                      onClick={() => handleRejectProposal(selectedProposal.id)}
+                      variant="destructive"
+                      className="bg-red-500/20 border-red-400/30 text-red-200 hover:bg-red-500/30"
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Reject
+                    </Button>
+                  </>
+                )}
                 <Button
                   onClick={() => handleDeleteProposal(selectedProposal.id)}
                   variant="destructive"
@@ -492,6 +556,7 @@ export default function AdminProposalManagement() {
           </div>
         </div>
       )}
-    </PageBackground>
-  );
+    </DashboardLayout>
+  </PageBackground>
+);
 }

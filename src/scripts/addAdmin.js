@@ -1,8 +1,9 @@
-// Script to add a custom admin account
+// Script to add a custom admin account with bcrypt password hashing
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { db } from './nodeDatabaseService.js';
+import bcrypt from 'bcryptjs';
 
 // Get the directory name in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -47,10 +48,14 @@ try {
     process.exit(1);
   }
   
-  // Add new admin
+  // Hash password with bcrypt
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+  
+  // Add new admin with hashed password
   const newAdmin = {
     username: username,
-    password: password,
+    password_hash: hashedPassword,
     role: 'superuser',
     created_at: new Date().toISOString()
   };
@@ -62,7 +67,7 @@ try {
   // Also store in entity database for browser access
   const entityAdmin = {
     username: username,
-    password_hash: password,
+    password_hash: hashedPassword,
     role: 'superuser',
     created_at: new Date().toISOString()
   };
@@ -93,7 +98,8 @@ if (typeof window !== 'undefined') {
   
   console.log('✅ Admin account created successfully!');
   console.log(`Username: ${username}`);
-  console.log(`Password: ${password}`);
+  console.log(`Password: ${password} (hashed for security)`);
+  console.log('\n⚠️  IMPORTANT: Save this password securely. It cannot be recovered if lost!');
   console.log('\nYou can now login to the admin panel at http://localhost:5173/admin/login');
   
 } catch (error) {

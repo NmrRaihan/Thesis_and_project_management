@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '@/services/databaseService';
+import { databaseService as db } from '@/services/databaseService';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -184,7 +184,7 @@ export default function RequestTeachers() {
             <div className="flex justify-between items-center py-6">
               <div className="flex items-center space-x-3">
                 <Button 
-                  onClick={() => navigate('/student/dashboard')} 
+                  onClick={() => navigate('/studentdashboard')}
                   variant="outline" 
                   size="sm"
                   className="bg-white/10 border-white/20 text-white hover:bg-white/20"

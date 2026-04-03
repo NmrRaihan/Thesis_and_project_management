@@ -182,25 +182,25 @@ export default function MyStudents() {
                     {/* Quick Actions */}
                     <div className="grid grid-cols-4 gap-2 pt-4 border-t border-white/20">
                       <Link to={`${createPageUrl('TeacherMessages')}?group=${group.id}`}>
-                        <Button variant="ghost" size="sm" className="w-full flex flex-col gap-1 h-auto py-2 text-white hover:bg-white/10">
+                        <Button variant="ghost-dark" size="sm" className="w-full flex flex-col gap-1 h-auto py-2">
                           <MessageSquare className="w-4 h-4" />
                           <span className="text-xs">Chat</span>
                         </Button>
                       </Link>
                       <Link to={`${createPageUrl('TaskBoard')}?group=${group.id}`}>
-                        <Button variant="ghost" size="sm" className="w-full flex flex-col gap-1 h-auto py-2 text-white hover:bg-white/10">
+                        <Button variant="ghost-dark" size="sm" className="w-full flex flex-col gap-1 h-auto py-2">
                           <ClipboardList className="w-4 h-4" />
                           <span className="text-xs">Tasks</span>
                         </Button>
                       </Link>
                       <Link to={`${createPageUrl('TeacherMeetings')}?group=${group.id}`}>
-                        <Button variant="ghost" size="sm" className="w-full flex flex-col gap-1 h-auto py-2 text-white hover:bg-white/10">
+                        <Button variant="ghost-dark" size="sm" className="w-full flex flex-col gap-1 h-auto py-2">
                           <Calendar className="w-4 h-4" />
                           <span className="text-xs">Meet</span>
                         </Button>
                       </Link>
                       <Link to={`${createPageUrl('TeacherFiles')}?group=${group.id}`}>
-                        <Button variant="ghost" size="sm" className="w-full flex flex-col gap-1 h-auto py-2 text-white hover:bg-white/10">
+                        <Button variant="ghost-dark" size="sm" className="w-full flex flex-col gap-1 h-auto py-2">
                           <FolderOpen className="w-4 h-4" />
                           <span className="text-xs">Files</span>
                         </Button>

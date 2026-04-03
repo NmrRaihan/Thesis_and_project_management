@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { db } from '@/services/databaseService';
+import { databaseService as db } from '@/services/databaseService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageBackground from '@/components/ui/PageBackground';
 import { motion } from 'framer-motion';
-import { Search, Users, Plus, CheckCircle, X, Crown, User } from 'lucide-react';
+import { Search, Users, Plus, CheckCircle, X, Crown, User, Mail } from 'lucide-react';
 
 export default function SelectPartnersUpdated() {
   const navigate = useNavigate();

@@ -15,6 +15,9 @@ export const Button = React.forwardRef(({
     outline: "border border-slate-300 bg-white hover:bg-slate-50 text-slate-900",
     ghost: "hover:bg-slate-100 text-slate-900",
     destructive: "bg-red-600 text-white hover:bg-red-700",
+    // Dark mode variants
+    "outline-dark": "border border-white/30 bg-white/10 hover:bg-white/20 text-white",
+    "ghost-dark": "hover:bg-white/10 text-white",
   };
   
   const sizes = {

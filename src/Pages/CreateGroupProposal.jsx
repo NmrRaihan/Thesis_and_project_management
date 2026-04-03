@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '@/services/databaseService';
+import { databaseService as db } from '@/services/databaseService';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -139,7 +139,7 @@ export default function CreateGroupProposal() {
                 <p className="text-blue-200">{existingProposal.abstract?.substring(0, 150)}...</p>
               </div>
               <Button 
-                onClick={() => navigate('/student/dashboard')}
+                onClick={() => navigate('/studentdashboard')}
                 className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -161,7 +161,7 @@ export default function CreateGroupProposal() {
             <div className="flex justify-between items-center py-6">
               <div className="flex items-center space-x-3">
                 <Button 
-                  onClick={() => navigate('/student/dashboard')} 
+                  onClick={() => navigate('/studentdashboard')} 
                   variant="outline" 
                   size="sm"
                   className="bg-white/10 border-white/20 text-white hover:bg-white/20"

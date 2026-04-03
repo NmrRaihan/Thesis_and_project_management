@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { db } from '@/services/databaseService';
+import { databaseService as db } from '@/services/databaseService';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageBackground from '@/components/ui/PageBackground';
 import StatCard from '@/components/dashboard/StatCard';
@@ -55,9 +55,26 @@ export default function TeacherDashboard() {
     
     // Load supervised groups
     const groups = await db.entities.StudentGroup.filter({ 
-      assigned_teacher_id: user.teacher_id 
+      assigned_teacher_id: user.teacher_id,
+      status: 'supervised'
     });
     setSupervisedGroups(groups);
+    
+    // Update teacher's current student count based on supervised groups
+    const currentStudentCount = groups.reduce((count, group) => count + (group.member_count || group.members?.length || 1), 0);
+    
+    // Update the teacher's record in the database with the current count
+    if (currentStudentCount !== user.current_students_count) {
+      await db.entities.Teacher.update(user.id, {
+        ...user,
+        current_students_count: currentStudentCount
+      });
+      
+      // Update current user in localStorage
+      const updatedUser = { ...user, current_students_count: currentStudentCount };
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
+    }
     
     // Load upcoming meetings
     const meetings = await db.entities.Meeting.filter({ 
@@ -263,7 +280,7 @@ export default function TeacherDashboard() {
                   Pending Requests
                 </h2>
                 <Link to={createPageUrl('TeacherRequests')}>
-                  <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
+                  <Button variant="outline-dark">
                     View All <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 </Link>
@@ -307,7 +324,7 @@ export default function TeacherDashboard() {
                   Upcoming Meetings
                 </h2>
                 <Link to={createPageUrl('TeacherMeetings')}>
-                  <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
+                  <Button variant="outline-dark">
                     View All <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 </Link>

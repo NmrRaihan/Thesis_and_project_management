@@ -51,13 +51,28 @@ The application will be available at http://localhost:5173
 
 The application uses **browser localStorage** for data persistence. All data is stored locally in your browser - no external database or server required.
 
+### ⚠️ Important Security Update (March 2026)
+All passwords are now **hashed with bcrypt** before storage. This includes:
+- Student passwords
+- Teacher passwords  
+- Admin passwords
+
+If you have existing accounts, run the migration script:
+```bash
+npm run migrate-passwords
+```
+
 ### Management Commands
 ```bash
 # Show available management commands
 npm run manage
 
-# Create default admin user
-npm run manage createsuperuser
+# Create admin user (password will be hashed)
+npm run add-admin <username> <password>
+# Example: npm run add-admin myadmin MySecurePass123!
+
+# Migrate existing passwords to bcrypt
+npm run migrate-passwords
 
 # Clear all data
 npm run manage clearalldata
@@ -71,7 +86,8 @@ npm run manage stats
 
 ### Admin Panel
 - Access via the "Admin Panel" link in the footer
-- Login with: `admin` / `admin123`
+- **Create admin account:** `npm run add-admin <username> <password>`
+- **Default credentials removed for security**
 - Features:
   - View all database entities
   - Clear all data
@@ -79,29 +95,31 @@ npm run manage stats
 
 ## Default Accounts
 
-### Sample Student
+### ⚠️ Security Notice
+Default hardcoded credentials have been **removed** for security. Create your own admin account using:
+```bash
+npm run add-admin admin your_secure_password
+```
+
+### Sample Student (Demo Data)
 - Student ID: `S001`
-- Password: `password123`
+- Password: `password123` *(if sample data is loaded)*
 
-### Sample Teacher
+### Sample Teacher (Demo Data)
 - Teacher ID: `T001`
-- Password: `password123`
-
-### Admin
-- Username: `admin`
-- Password: `admin123`
+- Password: `password123` *(if sample data is loaded)*
 
 ## Troubleshooting
 
 ### If Registration/Login Shows "Fail to Fetch" Error
-This error occurs when the application tries to connect to a backend server. The application now uses browser localStorage only, so no server connection is needed.
+The application now uses **localStorage only** - no backend server required.
 
 1. Refresh the page
-2. Check that `USE_REAL_DATABASE` is set to `false` in `src/services/databaseService.js`
-3. Clear browser data if needed:
+2. Clear browser data if needed:
    - Open browser DevTools (F12)
    - Go to Application/Storage tab
    - Clear localStorage
+3. Reinstall dependencies: `npm install`
 
 ### Reset All Data
 If you need to completely reset the application:
@@ -129,11 +147,21 @@ If you need to completely reset the application:
 src/
 ├── Entities/          # Data models (JSON)
 ├── Pages/             # UI pages for students and teachers
-├── api/               # Database clients
+├── api/               # Database clients (base44Client for localStorage)
 ├── components/        # Reusable UI components
-├── services/          # Business logic services
-└── scripts/           # Management scripts
+├── services/          # Business logic services (databaseService.js)
+├── scripts/           # Management scripts (add-admin, migrate-passwords, etc.)
+└── utils/             # Utility functions
 ```
+
+### Architecture
+**LocalStorage Only** - All data persists in browser localStorage
+- No backend server required
+- No network latency
+- Works offline
+- Browser-specific storage (~5-10MB limit)
+
+For production deployment considerations, see `SECURITY_ARCHITECTURE_IMPROVEMENTS.md`
 
 ### Technology Stack
 - React 19 with Vite

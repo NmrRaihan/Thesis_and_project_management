@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { db } from '@/services/databaseService';
+import { databaseService as db } from '@/services/databaseService';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageBackground from '@/components/ui/PageBackground';
 import { Card } from '@/components/ui/card';

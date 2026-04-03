@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '@/services/databaseService';
+import { databaseService as db } from '@/services/databaseService';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -34,7 +34,7 @@ export default function GroupInvitations() {
     // Check if student is already in a group
     if (studentData.group_id) {
       toast.info('You are already in a group');
-      navigate('/student/dashboard');
+      navigate('/studentdashboard');
       return;
     }
     
@@ -119,7 +119,7 @@ export default function GroupInvitations() {
       localStorage.setItem('currentUser', JSON.stringify(updatedStudent));
       
       toast.success(`You have joined ${invitation.group_name}!`);
-      navigate('/student/dashboard');
+      navigate('/studentdashboard');
     } catch (error) {
       console.error('Error accepting invitation:', error);
       toast.error('Failed to accept invitation');
@@ -167,7 +167,7 @@ export default function GroupInvitations() {
             <div className="flex justify-between items-center py-6">
               <div className="flex items-center space-x-3">
                 <Button 
-                  onClick={() => navigate('/student/dashboard')} 
+                  onClick={() => navigate('/studentdashboard')} 
                   variant="outline" 
                   size="sm"
                   className="bg-white/10 border-white/20 text-white hover:bg-white/20"
@@ -258,7 +258,7 @@ export default function GroupInvitations() {
                 You don't have any pending group invitations at the moment.
               </p>
               <Button 
-                onClick={() => navigate('/student/dashboard')}
+                onClick={() => navigate('/studentdashboard')}
                 className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { db } from '@/services/databaseService';
+import { databaseService as db } from '@/services/databaseService';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageBackground from '@/components/ui/PageBackground';
 import { Card } from '@/components/ui/card';
@@ -257,7 +257,7 @@ export default function CreateProposal() {
       project_type: formData.project_type,
       field: formData.field,
       keywords: formData.keywords,
-      status: submit ? 'submitted' : 'draft'
+      status: submit ? 'pending_admin_approval' : 'draft'
     };
     
     try {
@@ -279,7 +279,10 @@ export default function CreateProposal() {
       toast.success(submit ? 'Proposal submitted!' : 'Proposal saved!');
       
       if (submit) {
-        navigate(createPageUrl('SuggestedTeachers'));
+        toast.success('Proposal submitted for admin review!');
+        setTimeout(() => {
+          navigate(createPageUrl('StudentDashboard'));
+        }, 2000);
       }
     } catch (error) {
       console.error('Error saving proposal:', error);

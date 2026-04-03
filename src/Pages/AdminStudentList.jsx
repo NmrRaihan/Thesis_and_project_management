@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '@/services/databaseService';
+import { createPageUrl } from '@/utils';
+import { databaseService as db } from '@/services/databaseService';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,7 @@ import {
   Trash2
 } from 'lucide-react';
 import PageBackground from '@/components/ui/PageBackground';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
 export default function AdminStudentList() {
   const navigate = useNavigate();
@@ -28,7 +30,7 @@ export default function AdminStudentList() {
     // Check if admin is logged in
     const adminUser = localStorage.getItem('adminUser');
     if (!adminUser) {
-      navigate('/admin/login');
+      navigate(createPageUrl('AdminLogin'));
       return;
     }
     
@@ -63,26 +65,27 @@ export default function AdminStudentList() {
   const handleViewStudent = (student) => {
     // Store student data in localStorage for the detail view
     localStorage.setItem('adminViewingStudent', JSON.stringify(student));
-    navigate(`/admin/student/${student.id}`);
+    navigate(createPageUrl(`AdminStudentDetail`), { state: { studentId: student.id } });
   };
 
   return (
     <PageBackground>
-      <div className="min-h-screen relative z-10">
-        {/* Header */}
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-t-2xl">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
-              <div className="flex items-center space-x-3">
-                <Button 
-                  onClick={() => navigate('/admin/dashboard')} 
-                  variant="outline" 
-                  size="sm"
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Dashboard
-                </Button>
+      <DashboardLayout userType="admin" currentPage="AdminStudentList">
+        <div className="min-h-screen relative z-10">
+          {/* Header */}
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-t-2xl">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center py-6">
+                <div className="flex items-center space-x-3">
+                  <Button 
+                    onClick={() => navigate(createPageUrl('AdminDashboard'))} 
+                    variant="outline" 
+                    size="sm"
+                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Dashboard
+                  </Button>
                 <div>
                   <h1 className="text-2xl font-bold text-white">Student Management</h1>
                   <p className="text-blue-200">Manage all student accounts</p>
@@ -177,6 +180,7 @@ export default function AdminStudentList() {
           )}
         </div>
       </div>
-    </PageBackground>
-  );
+    </DashboardLayout>
+  </PageBackground>
+);
 }

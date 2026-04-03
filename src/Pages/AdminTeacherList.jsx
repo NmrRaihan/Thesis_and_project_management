@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '@/services/databaseService';
+import { createPageUrl } from '@/utils';
+import { databaseService as db } from '@/services/databaseService';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,7 @@ import {
   Trash2
 } from 'lucide-react';
 import PageBackground from '@/components/ui/PageBackground';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
 export default function AdminTeacherList() {
   const navigate = useNavigate();
@@ -28,7 +30,7 @@ export default function AdminTeacherList() {
     // Check if admin is logged in
     const adminUser = localStorage.getItem('adminUser');
     if (!adminUser) {
-      navigate('/admin/login');
+      navigate(createPageUrl('AdminLogin'));
       return;
     }
     
@@ -61,41 +63,41 @@ export default function AdminTeacherList() {
   };
 
   const handleViewTeacher = (teacher) => {
-    // Store teacher data in localStorage for the detail view
     localStorage.setItem('adminViewingTeacher', JSON.stringify(teacher));
-    navigate(`/admin/teacher/${teacher.id}`);
+    navigate(createPageUrl('AdminTeacherDetail'), { state: { teacherId: teacher.id } });
   };
 
   return (
     <PageBackground>
-      <div className="min-h-screen relative z-10">
-        {/* Header */}
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-t-2xl">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
-              <div className="flex items-center space-x-3">
-                <Button 
-                  onClick={() => navigate('/admin/dashboard')} 
-                  variant="outline" 
-                  size="sm"
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-                <div>
-                  <h1 className="text-2xl font-bold text-white">Teacher Management</h1>
-                  <p className="text-blue-200">Manage all teacher accounts</p>
+      <DashboardLayout userType="admin" currentPage="AdminTeacherList">
+        <div className="min-h-screen relative z-10">
+          {/* Header */}
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-t-2xl">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center py-6">
+                <div className="flex items-center space-x-3">
+                  <Button 
+                    onClick={() => navigate(createPageUrl('AdminDashboard'))} 
+                    variant="outline" 
+                    size="sm"
+                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Dashboard
+                  </Button>
+                  <div>
+                    <h1 className="text-2xl font-bold text-white">Teacher Management</h1>
+                    <p className="text-blue-200">Manage all teacher accounts</p>
+                  </div>
                 </div>
-              </div>
-              <div className="text-sm text-blue-200">
-                Total Teachers: {teachers.length}
+                <div className="text-sm text-blue-200">
+                  Total Teachers: {teachers.length}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {loading ? (
             <div className="py-12 text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
@@ -179,6 +181,7 @@ export default function AdminTeacherList() {
           )}
         </div>
       </div>
-    </PageBackground>
-  );
+    </DashboardLayout>
+  </PageBackground>
+);
 }

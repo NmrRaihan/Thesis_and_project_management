@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '@/services/databaseService';
+import { createPageUrl } from '@/utils';
+import { databaseService as db } from '@/services/databaseService';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,7 @@ import {
   XCircle
 } from 'lucide-react';
 import PageBackground from '@/components/ui/PageBackground';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
 export default function AdminGroups() {
   const navigate = useNavigate();
@@ -33,7 +35,7 @@ export default function AdminGroups() {
     // Check if admin is logged in
     const adminUser = localStorage.getItem('adminUser');
     if (!adminUser) {
-      navigate('/admin/login');
+      navigate(createPageUrl('AdminLogin'));
       return;
     }
 
@@ -62,26 +64,26 @@ export default function AdminGroups() {
   const getStatusBadgeVariant = (status) => {
     switch (status) {
       case 'active':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-green-500/20 text-green-300 border-green-400/30';
       case 'inactive':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-red-500/20 text-red-300 border-red-400/30';
       case 'supervised':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-500/20 text-blue-300 border-blue-400/30';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-slate-500/20 text-slate-300 border-slate-400/30';
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
       case 'active':
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
+        return <CheckCircle className="w-4 h-4 text-green-400" />;
       case 'inactive':
-        return <XCircle className="w-4 h-4 text-red-600" />;
+        return <XCircle className="w-4 h-4 text-red-400" />;
       case 'supervised':
-        return <GraduationCap className="w-4 h-4 text-blue-600" />;
+        return <GraduationCap className="w-4 h-4 text-blue-400" />;
       default:
-        return <Clock className="w-4 h-4 text-gray-600" />;
+        return <Clock className="w-4 h-4 text-slate-400" />;
     }
   };
 
@@ -101,7 +103,7 @@ export default function AdminGroups() {
   const paginatedGroups = filteredGroups.slice(startIndex, startIndex + itemsPerPage);
 
   const handleViewGroup = (group) => {
-    navigate(`/admin/groups/${group.group_id}`);
+    navigate(createPageUrl('AdminStudentGroupDetail'), { state: { groupId: group.id } });
   };
 
   const handleDeleteGroup = async (groupId) => {
@@ -152,32 +154,33 @@ export default function AdminGroups() {
 
   return (
     <PageBackground>
-      <div className="min-h-screen relative z-10">
-        {/* Header */}
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-t-2xl">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-white" />
+      <DashboardLayout userType="admin" currentPage="AdminGroups">
+        <div className="min-h-screen relative z-10">
+          {/* Header */}
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-t-2xl">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center py-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                    <Users className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-white">Student Groups</h1>
+                    <p className="text-blue-200">Manage student project groups</p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-white">Student Groups</h1>
-                  <p className="text-blue-200">Manage student project groups</p>
-                </div>
+                <Button 
+                  onClick={() => navigate(createPageUrl('AdminDashboard'))}
+                  variant="outline"
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                >
+                  Back to Dashboard
+                </Button>
               </div>
-              <Button 
-                onClick={() => navigate('/admin/dashboard')}
-                variant="outline"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-              >
-                Back to Dashboard
-              </Button>
             </div>
           </div>
-        </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20">
@@ -382,6 +385,7 @@ export default function AdminGroups() {
           )}
         </div>
       </div>
-    </PageBackground>
-  );
+    </DashboardLayout>
+  </PageBackground>
+);
 }

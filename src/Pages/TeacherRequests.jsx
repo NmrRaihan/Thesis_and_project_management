@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '@/services/databaseService';
+import { createPageUrl } from '@/utils';
+import { databaseService as db } from '@/services/databaseService';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -14,6 +15,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import PageBackground from '@/components/ui/PageBackground';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
 export default function TeacherRequests() {
   const navigate = useNavigate();
@@ -23,8 +25,10 @@ export default function TeacherRequests() {
 
   useEffect(() => {
     const currentUser = localStorage.getItem('currentUser');
-    if (!currentUser) {
-      navigate('/teacher/login');
+    const userType = localStorage.getItem('userType');
+    
+    if (!currentUser || userType !== 'teacher') {
+      navigate(createPageUrl('TeacherLogin'));
       return;
     }
     
@@ -49,7 +53,8 @@ export default function TeacherRequests() {
 
   const handleAccept = async (request) => {
     // Check if teacher has capacity
-    if (teacher.current_students_count >= teacher.max_students) {
+    const currentStudentsCount = teacher.current_students_count || 0;
+    if (currentStudentsCount >= teacher.max_students) {
       toast.error('You have reached your maximum student capacity');
       return;
     }
@@ -102,36 +107,41 @@ export default function TeacherRequests() {
     );
   }
 
+  // Redirect if not teacher
+  if (localStorage.getItem('userType') !== 'teacher') {
+    return null; // Will redirect via useEffect
+  }
+
   return (
     <PageBackground>
-      <div className="min-h-screen relative z-10">
-        {/* Header */}
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-t-2xl">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
-              <div className="flex items-center space-x-3">
-                <Button 
-                  onClick={() => navigate('/teacher/dashboard')} 
-                  variant="outline" 
-                  size="sm"
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-                <div>
-                  <h1 className="text-2xl font-bold text-white">Supervision Requests</h1>
-                  <p className="text-purple-200">Review requests from student groups</p>
+      <DashboardLayout userType="teacher" currentPage="TeacherRequests">
+        <div className="min-h-screen relative z-10">
+          {/* Header */}
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-t-2xl">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center py-6">
+                <div className="flex items-center space-x-3">
+                  <Button 
+                    onClick={() => navigate(createPageUrl('TeacherDashboard'))} 
+                    variant="outline-dark" 
+                    size="sm"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Dashboard
+                  </Button>
+                  <div>
+                    <h1 className="text-2xl font-bold text-white">Supervision Requests</h1>
+                    <p className="text-purple-200">Review requests from student groups</p>
+                  </div>
                 </div>
-              </div>
-              <div className="text-sm text-purple-200">
-                Pending: {requests.length}
+                <div className="text-sm text-purple-200">
+                  Pending: {requests.length}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {requests.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {requests.map((request) => (
@@ -212,7 +222,7 @@ export default function TeacherRequests() {
                 You don't have any pending supervision requests at the moment.
               </p>
               <Button 
-                onClick={() => navigate('/teacher/dashboard')}
+                onClick={() => navigate(createPageUrl('TeacherDashboard'))}
                 className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -280,6 +290,7 @@ export default function TeacherRequests() {
           </div>
         </div>
       </div>
-    </PageBackground>
-  );
+    </DashboardLayout>
+  </PageBackground>
+);
 }
