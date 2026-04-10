@@ -2,16 +2,28 @@
   "name": "StudentGroup",
   "type": "object",
   "properties": {
+    "group_id": {
+      "type": "string"
+    },
     "group_name": {
       "type": "string"
     },
-    "admin_student_id": {
+    "leader_student_id": {
       "type": "string"
     },
-    "member_ids": {
+    "members": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "object",
+        "properties": {
+          "student_id": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["leader", "member"]
+          }
+        }
       }
     },
     "project_type": {
@@ -41,6 +53,6 @@
     }
   },
   "required": [
-    "admin_student_id"
+    "leader_student_id"
   ]
 }

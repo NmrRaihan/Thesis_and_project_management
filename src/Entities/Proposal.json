@@ -31,6 +31,14 @@
         "type": "string"
       }
     },
+    "preferred_teacher_id": {
+      "type": "string",
+      "description": "Student's preferred teacher for supervision"
+    },
+    "preferred_teacher_name": {
+      "type": "string",
+      "description": "Name of student's preferred teacher"
+    },
     "status": {
       "type": "string",
       "enum": [

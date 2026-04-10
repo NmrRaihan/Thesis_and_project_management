@@ -18,6 +18,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import PageBackground from '@/components/ui/PageBackground';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
 export default function AdminStudentDetail() {
   const { id } = useParams();
@@ -114,49 +115,29 @@ export default function AdminStudentDetail() {
 
   return (
     <PageBackground>
-      <div className="min-h-screen relative z-10">
-        {/* Header */}
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-t-2xl">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
-              <div className="flex items-center space-x-3">
-                <Button 
-                  onClick={() => navigate('/admin/students')} 
-                  variant="outline" 
-                  size="sm"
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Students
-                </Button>
-                <div>
-                  <h1 className="text-2xl font-bold text-white">Student Details</h1>
-                  <p className="text-blue-200">View and manage student account</p>
-                </div>
+      <DashboardLayout userType="admin" currentPage="AdminStudentDetail">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                  <User className="w-8 h-8 text-blue-400" />
+                  Student Details
+                </h1>
+                <p className="text-blue-200 mt-1">View and manage student account information</p>
               </div>
-              <div className="flex space-x-3">
-                <Button 
-                  variant="outline" 
-                  onClick={handleUpdateStudent}
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  onClick={handleDeleteStudent}
-                  className="bg-red-500/20 border-red-400/30 text-red-200 hover:bg-red-500/30"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </Button>
-              </div>
+              <Button 
+                onClick={() => navigate('/admin/students')} 
+                variant="outline"
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Students
+              </Button>
             </div>
           </div>
-        </div>
 
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Profile Info Card */}
             <div className="lg:col-span-2">
@@ -165,16 +146,21 @@ export default function AdminStudentDetail() {
                 
                 <div className="space-y-6">
                   <div className="flex items-center space-x-4">
-                    <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                      <User className="w-10 h-10 text-white" />
+                    <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                      <span className="text-white font-bold text-2xl">
+                        {student.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                      </span>
                     </div>
                     <div>
                       <h3 className="text-2xl font-bold text-white">{student.full_name}</h3>
-                      <p className="text-blue-200">Student ID: {student.student_id}</p>
+                      <p className="text-blue-300 flex items-center gap-2 mt-1">
+                        <IdCard className="w-4 h-4" />
+                        {student.student_id}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-white/10">
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-blue-200 mb-1">Full Name</label>
@@ -183,15 +169,15 @@ export default function AdminStudentDetail() {
                       <div>
                         <label className="block text-sm font-medium text-blue-200 mb-1">Email</label>
                         <p className="text-white flex items-center">
-                          <Mail className="w-4 h-4 mr-2 text-blue-300" />
-                          {student.email}
+                          <Mail className="w-4 h-4 mr-2 text-blue-400" />
+                          {student.email || 'N/A'}
                         </p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-blue-200 mb-1">Department</label>
                         <p className="text-white flex items-center">
-                          <Building className="w-4 h-4 mr-2 text-blue-300" />
-                          {student.department}
+                          <Building className="w-4 h-4 mr-2 text-blue-400" />
+                          {student.department || 'N/A'}
                         </p>
                       </div>
                     </div>
@@ -200,26 +186,31 @@ export default function AdminStudentDetail() {
                       <div>
                         <label className="block text-sm font-medium text-blue-200 mb-1">Student ID</label>
                         <p className="text-white flex items-center">
-                          <IdCard className="w-4 h-4 mr-2 text-blue-300" />
+                          <IdCard className="w-4 h-4 mr-2 text-blue-400" />
                           {student.student_id}
                         </p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-blue-200 mb-1">Password</label>
-                        <p className="text-white flex items-center">
-                          <IdCard className="w-4 h-4 mr-2 text-blue-300" />
-                          {showPassword ? student.password_hash : '••••••••'}
+                        <div className="flex items-center">
+                          <p className="text-white font-mono text-sm bg-white/5 px-3 py-2 rounded border border-white/10 flex-1">
+                            {showPassword ? student.password_hash : '••••••••••••'}
+                          </p>
                           <button 
                             onClick={() => setShowPassword(!showPassword)}
-                            className="ml-2 text-blue-300 hover:text-blue-100"
+                            className="ml-2 p-2 text-blue-300 hover:text-blue-100 hover:bg-white/10 rounded transition-colors"
+                            title={showPassword ? "Hide password" : "Show password"}
                           >
-                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                           </button>
+                        </div>
+                        <p className="text-xs text-blue-300 mt-1">
+                          ⚠️ This is the hashed password. The actual password is not recoverable.
                         </p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-blue-200 mb-1">Status</label>
-                        <Badge variant={student.status === 'active' ? 'default' : 'secondary'} className="bg-blue-500/30 text-blue-200 border-blue-400/50">
+                        <Badge className="bg-green-500/20 text-green-300 border border-green-400/30">
                           {student.status || 'active'}
                         </Badge>
                       </div>
@@ -232,15 +223,36 @@ export default function AdminStudentDetail() {
             {/* Sidebar with additional info */}
             <div className="space-y-6">
               <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20">
-                <h3 className="text-lg font-semibold text-white mb-4">Account Status</h3>
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-blue-400" />
+                  Group Status
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-200">Role</span>
+                    <Badge className={student.is_group_admin ? 'bg-blue-500/20 text-blue-300 border-blue-400/30' : 'bg-slate-500/20 text-slate-300 border-slate-400/30'}>
+                      {student.is_group_admin ? 'Group Leader' : 'Member'}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-blue-200">Group ID</span>
+                    <span className="text-white font-mono text-sm">{student.group_id || 'None'}</span>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20">
+                <h3 className="text-lg font-semibold text-white mb-4">Account Info</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-blue-200">Created</span>
-                    <span className="text-white">{new Date(student.created_at).toLocaleDateString()}</span>
+                    <span className="text-white text-sm">
+                      {student.created_at ? new Date(student.created_at).toLocaleDateString() : 'N/A'}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-blue-200">Last Updated</span>
-                    <span className="text-white">
+                    <span className="text-white text-sm">
                       {student.updated_at ? new Date(student.updated_at).toLocaleDateString() : 'Never'}
                     </span>
                   </div>
@@ -248,29 +260,21 @@ export default function AdminStudentDetail() {
               </Card>
 
               <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20">
-                <h3 className="text-lg font-semibold text-white mb-4">Group Status</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-blue-200">Group Role</span>
-                    <Badge variant={student.is_group_admin ? 'default' : 'secondary'} className="bg-blue-500/30 text-blue-200 border-blue-400/50">
-                      {student.is_group_admin ? 'Group Admin' : 'Member'}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-blue-200">Group ID</span>
-                    <span className="text-white">{student.group_id || 'None'}</span>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20">
                 <h3 className="text-lg font-semibold text-white mb-4">Actions</h3>
                 <div className="space-y-2">
-                  <Button className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700" onClick={handleUpdateStudent}>
+                  <Button 
+                    className="w-full bg-blue-500/20 border border-blue-400/30 text-blue-200 hover:bg-blue-500/30" 
+                    variant="outline"
+                    onClick={() => toast.info('Edit functionality coming soon')}
+                  >
                     <Edit className="w-4 h-4 mr-2" />
                     Edit Profile
                   </Button>
-                  <Button className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700" onClick={handleDeleteStudent}>
+                  <Button 
+                    className="w-full bg-red-500/20 border border-red-400/30 text-red-200 hover:bg-red-500/30" 
+                    variant="outline"
+                    onClick={handleDeleteStudent}
+                  >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete Account
                   </Button>
@@ -279,7 +283,7 @@ export default function AdminStudentDetail() {
             </div>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     </PageBackground>
   );
 }

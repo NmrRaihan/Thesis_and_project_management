@@ -19,7 +19,8 @@ import {
   XCircle,
   AlertTriangle,
   GraduationCap,
-  Calendar
+  Calendar,
+  Users
 } from 'lucide-react';
 import PageBackground from '@/components/ui/PageBackground';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
@@ -27,11 +28,17 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout';
 export default function AdminProposalManagement() {
   const navigate = useNavigate();
   const [proposals, setProposals] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [students, setStudents] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [showProposalModal, setShowProposalModal] = useState(false);
+  const [selectedProposal, setSelectedProposal] = useState(null);
+  const [selectedTeacherId, setSelectedTeacherId] = useState('');
+  const [groupMembers, setGroupMembers] = useState([]);
 
   useEffect(() => {
     // Check if admin is logged in
@@ -42,7 +49,23 @@ export default function AdminProposalManagement() {
     }
 
     loadProposals();
+    loadTeachers();
+    loadStudents();
   }, []);
+
+  const loadStudents = async () => {
+    try {
+      const allStudents = await db.entities.Student.list();
+      const studentsMap = {};
+      allStudents.forEach(s => {
+        studentsMap[s.student_id] = s;
+        studentsMap[s.id] = s;
+      });
+      setStudents(studentsMap);
+    } catch (error) {
+      console.error('Error loading students:', error);
+    }
+  };
 
   const loadProposals = async () => {
     try {
@@ -60,6 +83,15 @@ export default function AdminProposalManagement() {
       toast.error('Failed to load proposals');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTeachers = async () => {
+    try {
+      const allTeachers = await db.entities.Teacher.filter({ status: 'active' });
+      setTeachers(allTeachers);
+    } catch (error) {
+      console.error('Error loading teachers:', error);
     }
   };
 
@@ -109,11 +141,45 @@ export default function AdminProposalManagement() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedProposals = filteredProposals.slice(startIndex, startIndex + itemsPerPage);
 
-  const [selectedProposal, setSelectedProposal] = useState(null);
-  const [showProposalModal, setShowProposalModal] = useState(false);
-
-  const handleViewProposal = (proposal) => {
+  const handleViewProposal = async (proposal) => {
     setSelectedProposal(proposal);
+    
+    // Pre-select the preferred teacher if student suggested one
+    if (proposal.preferred_teacher_id) {
+      setSelectedTeacherId(proposal.preferred_teacher_id);
+    } else {
+      setSelectedTeacherId('');
+    }
+    
+    // Load group members if proposal has group_id
+    if (proposal.group_id) {
+      try {
+        const groups = await db.entities.StudentGroup.filter({ id: proposal.group_id });
+        if (groups.length > 0) {
+          const group = groups[0];
+          // Get members from the members array
+          const members = [];
+          if (group.members && Array.isArray(group.members)) {
+            group.members.forEach(member => {
+              const studentData = students[member.student_id];
+              if (studentData) {
+                members.push({
+                  ...studentData,
+                  role: member.role || 'member'
+                });
+              }
+            });
+          }
+          setGroupMembers(members);
+        }
+      } catch (error) {
+        console.error('Error loading group members:', error);
+        setGroupMembers([]);
+      }
+    } else {
+      setGroupMembers([]);
+    }
+    
     setShowProposalModal(true);
   };
 
@@ -124,16 +190,68 @@ export default function AdminProposalManagement() {
 
   const handleApproveProposal = async (proposalId) => {
     try {
+      // Get the proposal details
+      const proposal = proposals.find(p => p.id === proposalId);
+      if (!proposal) {
+        toast.error('Proposal not found');
+        return;
+      }
+
+      // Check if a teacher has been selected
+      if (!selectedTeacherId) {
+        toast.error('Please select a teacher to assign to this group');
+        return;
+      }
+
       // Update proposal status to approved
       await db.entities.Proposal.update(proposalId, {
         status: 'approved',
         approved_at: new Date().toISOString()
       });
       
-      toast.success('Proposal approved successfully! Students can now select a supervisor.');
+      // Find the group associated with this proposal and assign the teacher
+      const groups = await db.entities.StudentGroup.filter({ id: proposal.group_id });
+      if (groups.length > 0) {
+        const group = groups[0];
+        
+        // Get teacher details
+        const teacher = teachers.find(t => t.teacher_id === selectedTeacherId);
+        
+        console.log('Assigning teacher to group:', {
+          groupId: group.id,
+          teacherId: selectedTeacherId,
+          teacherName: teacher?.full_name,
+          currentStatus: group.status
+        });
+        
+        // Update group with assigned teacher - DON'T use spread operator, update specific fields
+        await db.entities.StudentGroup.update(group.id, {
+          assigned_teacher_id: selectedTeacherId,
+          supervisor_name: teacher?.full_name || 'Unknown',
+          status: 'supervised',
+          updated_at: new Date().toISOString()
+        });
+        
+        console.log('Group updated successfully');
+        
+        // Verify the update
+        const verifyGroups = await db.entities.StudentGroup.filter({ id: proposal.group_id });
+        if (verifyGroups.length > 0) {
+          console.log('Verified group after update:', {
+            assigned_teacher_id: verifyGroups[0].assigned_teacher_id,
+            status: verifyGroups[0].status,
+            supervisor_name: verifyGroups[0].supervisor_name
+          });
+        }
+        
+        toast.success(`Proposal approved! ${teacher?.full_name} has been assigned as supervisor.`);
+      } else {
+        toast.error('Group not found for this proposal');
+      }
       
       // Close the modal and refresh the proposals list
       closeProposalModal();
+      setSelectedTeacherId(''); // Reset teacher selection
       loadProposals();
     } catch (error) {
       console.error('Error approving proposal:', error);
@@ -142,18 +260,61 @@ export default function AdminProposalManagement() {
   };
 
   const handleRejectProposal = async (proposalId) => {
-    if (window.confirm('Are you sure you want to reject this proposal?')) {
+    if (window.confirm('Are you sure you want to reject this proposal? This will remove the assigned teacher and allow students to reform their group.')) {
       try {
+        // Get the proposal details
+        const proposal = proposals.find(p => p.id === proposalId);
+        if (!proposal) {
+          toast.error('Proposal not found');
+          return;
+        }
+
+        // If proposal was approved, remove teacher assignment from group
+        if (proposal.status === 'approved' && proposal.group_id) {
+          const groups = await db.entities.StudentGroup.filter({ id: proposal.group_id });
+          if (groups.length > 0) {
+            const group = groups[0];
+            
+            // Remove teacher assignment and revert status
+            await db.entities.StudentGroup.update(group.id, {
+              ...group,
+              assigned_teacher_id: null,
+              supervisor_name: null,
+              status: 'active',  // Revert to active (not supervised)
+              updated_at: new Date().toISOString()
+            });
+            
+            toast.info('Teacher assignment removed from group');
+          }
+        }
+        
         // Update proposal status to rejected
         await db.entities.Proposal.update(proposalId, {
           status: 'rejected',
           rejected_at: new Date().toISOString()
         });
         
-        toast.success('Proposal rejected');
+        // Clear group_id from all students in this group so they can select partners again
+        if (proposal.group_id) {
+          try {
+            const studentsInGroup = await db.entities.Student.filter({ group_id: proposal.group_id });
+            for (const student of studentsInGroup) {
+              await db.entities.Student.update(student.id, {
+                group_id: null,
+                is_group_admin: false
+              });
+            }
+            toast.info('Students can now select new partners');
+          } catch (error) {
+            console.error('Error clearing student group assignments:', error);
+          }
+        }
+        
+        toast.success('Proposal rejected, teacher assignment removed, and students freed to select new partners');
         
         // Close the modal and refresh the proposals list
         closeProposalModal();
+        setSelectedTeacherId('');
         loadProposals();
       } catch (error) {
         console.error('Error rejecting proposal:', error);
@@ -163,10 +324,49 @@ export default function AdminProposalManagement() {
   };
 
   const handleDeleteProposal = async (proposalId) => {
-    if (window.confirm('Are you sure you want to delete this proposal? This action cannot be undone.')) {
+    if (window.confirm('Are you sure you want to delete this proposal? This will also remove the teacher assignment and free students to select new partners. This action cannot be undone.')) {
       try {
+        // Get the proposal details before deleting
+        const proposal = proposals.find(p => p.id === proposalId);
+        
+        // If proposal was approved, remove teacher assignment from group
+        if (proposal && proposal.status === 'approved' && proposal.group_id) {
+          const groups = await db.entities.StudentGroup.filter({ id: proposal.group_id });
+          if (groups.length > 0) {
+            const group = groups[0];
+            
+            // Remove teacher assignment and revert status
+            await db.entities.StudentGroup.update(group.id, {
+              ...group,
+              assigned_teacher_id: null,
+              supervisor_name: null,
+              status: 'active',  // Revert to active (not supervised)
+              updated_at: new Date().toISOString()
+            });
+            
+            toast.info('Teacher assignment removed from group');
+          }
+        }
+        
+        // Clear group_id from all students in this group so they can select partners again
+        if (proposal && proposal.group_id) {
+          try {
+            const studentsInGroup = await db.entities.Student.filter({ group_id: proposal.group_id });
+            for (const student of studentsInGroup) {
+              await db.entities.Student.update(student.id, {
+                group_id: null,
+                is_group_admin: false
+              });
+            }
+            toast.info('Students can now select new partners');
+          } catch (error) {
+            console.error('Error clearing student group assignments:', error);
+          }
+        }
+        
+        // Delete the proposal
         await db.entities.Proposal.delete(proposalId);
-        toast.success('Proposal deleted successfully');
+        toast.success('Proposal deleted, teacher assignment removed, and students freed');
         loadProposals(); // Refresh the list
       } catch (error) {
         console.error('Error deleting proposal:', error);
@@ -190,7 +390,7 @@ export default function AdminProposalManagement() {
 
   return (
     <PageBackground>
-      <DashboardLayout userType="admin" currentPage="AdminProposalManagement">
+      <DashboardLayout userType="admin" currentPage="/admin/proposals">
         <div className="min-h-screen relative z-10">
           {/* Header */}
           <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-t-2xl">
@@ -472,6 +672,38 @@ export default function AdminProposalManagement() {
                 </Card>
               </div>
               
+              {/* Group Members Section */}
+              {groupMembers.length > 0 && (
+                <Card className="p-4 bg-white/5 border border-white/10">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+                    <Users className="w-5 h-5 mr-2 text-purple-400" />
+                    Group Members ({groupMembers.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {groupMembers.map((member, index) => (
+                      <div key={member.id || index} className="p-4 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-all">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <p className="font-semibold text-white">{member.full_name}</p>
+                            <p className="text-xs text-orange-300 mt-1">ID: {member.student_id}</p>
+                          </div>
+                          {member.role === 'leader' && (
+                            <Badge className="bg-blue-500/20 text-blue-300 border border-blue-400/30 text-xs">
+                              Leader
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="space-y-1 text-xs text-orange-200">
+                          <p><span className="text-orange-300">Dept:</span> {member.department || 'N/A'}</p>
+                          <p><span className="text-orange-300">Email:</span> {member.email || 'N/A'}</p>
+                          <p><span className="text-orange-300">Status:</span> {member.status || 'active'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+              
               {selectedProposal.description && (
                 <Card className="p-4 bg-white/5 border border-white/10">
                   <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
@@ -510,6 +742,60 @@ export default function AdminProposalManagement() {
                   </h3>
                   <p className="text-orange-200 whitespace-pre-wrap">{selectedProposal.timeline}</p>
                 </Card>
+              )}
+              
+              {/* Teacher Assignment Section */}
+              {selectedProposal.status === 'pending_admin_approval' && (
+                <div className="mt-6 p-4 bg-blue-500/10 border border-blue-400/30 rounded-xl">
+                  <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                    <GraduationCap className="w-5 h-5 text-blue-400" />
+                    Assign Supervisor
+                  </h4>
+                  
+                  {/* Show student's preferred teacher if they suggested one */}
+                  {selectedProposal.preferred_teacher_name && (
+                    <div className="mb-4 p-3 bg-green-500/10 border border-green-400/30 rounded-lg">
+                      <p className="text-green-300 text-sm font-medium mb-1">
+                        💡 Student's Preferred Supervisor:
+                      </p>
+                      <p className="text-white">
+                        {selectedProposal.preferred_teacher_name}
+                      </p>
+                      <p className="text-green-200 text-xs mt-1">
+                        The admin can choose to assign this teacher or select a different one based on suitability.
+                      </p>
+                    </div>
+                  )}
+                  
+                  <p className="text-blue-200 text-sm mb-3">
+                    Select a teacher to supervise this group. This will be required for approval.
+                  </p>
+                  <select
+                    value={selectedTeacherId}
+                    onChange={(e) => setSelectedTeacherId(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="" className="bg-slate-800">-- Select a Teacher --</option>
+                    {teachers.map((teacher) => {
+                      const isPreferred = teacher.teacher_id === selectedProposal.preferred_teacher_id;
+                      return (
+                        <option 
+                          key={teacher.teacher_id} 
+                          value={teacher.teacher_id} 
+                          className="bg-slate-800"
+                        >
+                          {teacher.full_name} - {teacher.department}
+                          {isPreferred ? ' ⭐ (Student\'s Choice)' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  {teachers.length === 0 && (
+                    <p className="text-yellow-300 text-xs mt-2">
+                      ⚠️ No active teachers found. Please add teachers first.
+                    </p>
+                  )}
+                </div>
               )}
               
               <div className="flex justify-end space-x-3 pt-4">

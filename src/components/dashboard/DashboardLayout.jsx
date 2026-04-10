@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { databaseService as db } from '@/services/databaseService';
 import Sidebar from './Sidebar';
 
 export default function DashboardLayout({ children, userType, currentPage }) {
@@ -28,13 +29,47 @@ export default function DashboardLayout({ children, userType, currentPage }) {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
-    // Check if student is supervised
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    if (currentUser.group_id && userType === 'student') {
-      setIsSupervised(currentUser.isSupervised || false);
-    }
+    // Check if student is supervised by checking their group status
+    const checkSupervisionStatus = async () => {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      if (currentUser.group_id && userType === 'student') {
+        try {
+          // Get the group details to check status
+          const groups = await db.entities.StudentGroup.filter({ id: currentUser.group_id });
+          if (groups.length > 0) {
+            const group = groups[0];
+            const wasSupervised = isSupervised;
+            const isNowSupervised = group.status === 'supervised';
+            
+            // Student is supervised if group status is 'supervised'
+            setIsSupervised(isNowSupervised);
+            
+            // Log status changes for debugging
+            if (wasSupervised !== isNowSupervised) {
+              console.log('DashboardLayout - Supervision status changed:', {
+                wasSupervised,
+                isNowSupervised,
+                groupStatus: group.status,
+                assigned_teacher_id: group.assigned_teacher_id
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error checking supervision status:', error);
+          setIsSupervised(false);
+        }
+      }
+    };
     
-    return () => window.removeEventListener('resize', checkMobile);
+    checkSupervisionStatus();
+    
+    // Set up polling to check supervision status every 5 seconds
+    const intervalId = setInterval(checkSupervisionStatus, 5000);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      clearInterval(intervalId);
+    };
   }, [userType]);
 
   // Toggle sidebar visibility

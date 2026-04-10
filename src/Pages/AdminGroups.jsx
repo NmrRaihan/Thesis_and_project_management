@@ -17,7 +17,8 @@ import {
   GraduationCap,
   Clock,
   CheckCircle,
-  XCircle
+  XCircle,
+  Power
 } from 'lucide-react';
 import PageBackground from '@/components/ui/PageBackground';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
@@ -47,8 +48,26 @@ export default function AdminGroups() {
       setLoading(true);
       const allGroups = await db.entities.StudentGroup.list();
       
+      // Calculate member count for each group by querying students
+      const groupsWithMemberCount = await Promise.all(allGroups.map(async (group) => {
+        // Try to get members from group.members array first
+        let memberCount = group.members ? group.members.length : 0;
+        
+        // If empty or unreliable, query students directly
+        if (memberCount === 0) {
+          const studentsInGroup = await db.entities.Student.filter({ group_id: group.id });
+          memberCount = studentsInGroup.length;
+        }
+        
+        return {
+          ...group,
+          member_count: memberCount,
+          max_members: 3
+        };
+      }));
+      
       // Sort by creation date (newest first)
-      const sortedGroups = allGroups.sort((a, b) => 
+      const sortedGroups = groupsWithMemberCount.sort((a, b) => 
         new Date(b.created_at) - new Date(a.created_at)
       );
       
@@ -103,7 +122,26 @@ export default function AdminGroups() {
   const paginatedGroups = filteredGroups.slice(startIndex, startIndex + itemsPerPage);
 
   const handleViewGroup = (group) => {
-    navigate(createPageUrl('AdminStudentGroupDetail'), { state: { groupId: group.id } });
+    navigate(`/admin/groups/${group.group_id}`);
+  };
+
+  const handleActivateGroup = async (group) => {
+    if (window.confirm(`Are you sure you want to activate "${group.group_name}"? This will allow students to request teachers.`)) {
+      try {
+        // Update group status to active
+        await db.entities.StudentGroup.update(group.id, {
+          ...group,
+          status: 'active',
+          updated_at: new Date().toISOString()
+        });
+        
+        toast.success(`Group "${group.group_name}" activated successfully!`);
+        loadGroups(); // Refresh the list
+      } catch (error) {
+        console.error('Error activating group:', error);
+        toast.error('Failed to activate group');
+      }
+    }
   };
 
   const handleDeleteGroup = async (groupId) => {
@@ -154,7 +192,7 @@ export default function AdminGroups() {
 
   return (
     <PageBackground>
-      <DashboardLayout userType="admin" currentPage="AdminGroups">
+      <DashboardLayout userType="admin" currentPage="/admin/groups">
         <div className="min-h-screen relative z-10">
           {/* Header */}
           <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-t-2xl">
@@ -341,6 +379,19 @@ export default function AdminGroups() {
                         <Eye className="w-4 h-4 mr-2" />
                         View Details
                       </Button>
+                      
+                      {group.status !== 'active' && (
+                        <Button
+                          onClick={() => handleActivateGroup(group)}
+                          variant="outline"
+                          size="sm"
+                          className="bg-green-500/20 border-green-400/30 text-green-200 hover:bg-green-500/30"
+                        >
+                          <Power className="w-4 h-4 mr-2" />
+                          Activate
+                        </Button>
+                      )}
+                      
                       <Button
                         onClick={() => handleDeleteGroup(group.group_id)}
                         variant="outline"

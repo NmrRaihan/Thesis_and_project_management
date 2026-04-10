@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageBackground from '@/components/ui/PageBackground';
 import { motion } from 'framer-motion';
-import { Search, Users, Plus, CheckCircle, X, Crown, User, Mail } from 'lucide-react';
+import { Search, Users, Plus, CheckCircle, X, Crown, User, Mail, Lock } from 'lucide-react';
 
 export default function SelectPartnersUpdated() {
   const navigate = useNavigate();
@@ -34,6 +34,17 @@ export default function SelectPartnersUpdated() {
     }
     setCurrentUser(user);
     loadData(user);
+    
+    // Set up polling to refresh data every 5 seconds
+    const intervalId = setInterval(() => {
+      const currentUserData = JSON.parse(localStorage.getItem('currentUser'));
+      if (currentUserData) {
+        loadData(currentUserData);
+      }
+    }, 5000);
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   const loadData = async (user) => {
@@ -41,17 +52,50 @@ export default function SelectPartnersUpdated() {
     try {
       // Load all students except current user
       const allStudents = await db.entities.Student.list();
-      const filteredStudents = allStudents.filter(s => s.student_id !== user.student_id);
-      setStudents(filteredStudents);
+      
+      // Filter out only current user, show others with their group status
+      const otherStudents = allStudents.filter(s => 
+        s.student_id !== user.student_id  // Not current user
+      );
+      
+      // Check group status for each student
+      const studentsWithGroupStatus = await Promise.all(
+        otherStudents.map(async (student) => {
+          if (student.group_id) {
+            // Student is in a group - check if full
+            const groups = await db.entities.StudentGroup.filter({ id: student.group_id });
+            if (groups.length > 0) {
+              const group = groups[0];
+              const members = await db.entities.Student.filter({ group_id: group.id });
+              return {
+                ...student,
+                isInGroup: true,
+                isGroupFull: members.length >= 3,
+                memberCount: members.length,
+                groupName: group.group_name
+              };
+            }
+          }
+          return {
+            ...student,
+            isInGroup: false,
+            isGroupFull: false,
+            memberCount: 0,
+            groupName: null
+          };
+        })
+      );
+      
+      setStudents(studentsWithGroupStatus);
 
       // Load group if exists
       if (user.group_id) {
-        const groups = await db.entities.StudentGroup.filter({ group_id: user.group_id });
+        const groups = await db.entities.StudentGroup.filter({ id: user.group_id });
         if (groups.length > 0) {
           setGroup(groups[0]);
           
           // Load group members
-          const members = await db.entities.Student.filter({ group_id: groups[0].group_id });
+          const members = await db.entities.Student.filter({ group_id: groups[0].id });
           setGroupMembers(members);
         }
       }
@@ -84,6 +128,7 @@ export default function SelectPartnersUpdated() {
         leader_student_id: currentUser.student_id,
         members: [{
           student_id: currentUser.student_id,
+          full_name: currentUser.full_name,
           role: 'leader'
         }],
         status: 'forming'
@@ -124,14 +169,21 @@ export default function SelectPartnersUpdated() {
         return;
       }
       
-      // Check if already invited
+      // Check if already invited (any status - pending, accepted, or declined)
       const existingInvite = await db.entities.GroupInvitation.filter({
         group_id: currentGroup.id,
         to_student_id: student.student_id
       });
       
       if (existingInvite.length > 0) {
-        toast.error('Already invited this student');
+        const invite = existingInvite[0];
+        if (invite.status === 'pending') {
+          toast.error('Already invited this student (waiting for response)');
+        } else if (invite.status === 'accepted') {
+          toast.error('This student has already joined your group');
+        } else if (invite.status === 'declined') {
+          toast.error('This student previously declined your invitation');
+        }
         return;
       }
       
@@ -157,14 +209,37 @@ export default function SelectPartnersUpdated() {
       // Update invitation status
       await db.entities.GroupInvitation.update(invite.id, { status: 'accepted' });
       
-      // Add student to group
+      // Get the group
       const groups = await db.entities.StudentGroup.filter({ group_id: invite.group_id });
       if (groups.length > 0) {
         const group = groups[0];
+        
+        // Update student with group_id
         await db.entities.Student.update(currentUser.id, { 
           group_id: group.id,
           is_group_admin: false // Member, not leader
         });
+        
+        // Add student to group members array if not already present
+        const existingMembers = group.members || [];
+        const isAlreadyMember = existingMembers.some(m => m.student_id === currentUser.student_id);
+        
+        if (!isAlreadyMember) {
+          const updatedMembers = [
+            ...existingMembers,
+            {
+              student_id: currentUser.student_id,
+              full_name: currentUser.full_name,
+              role: 'member'
+            }
+          ];
+          
+          await db.entities.StudentGroup.update(group.id, {
+            ...group,
+            members: updatedMembers,
+            updated_at: new Date().toISOString()
+          });
+        }
         
         const updatedUser = { ...currentUser, group_id: group.id, is_group_admin: false };
         localStorage.setItem('currentUser', JSON.stringify(updatedUser));
@@ -371,18 +446,42 @@ export default function SelectPartnersUpdated() {
                     key={student.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl p-4 hover:bg-white/15 transition-all"
+                    className={`bg-white/10 backdrop-blur-lg border rounded-xl p-4 transition-all ${
+                      student.isGroupFull 
+                        ? 'border-red-400/30 opacity-75' 
+                        : student.isInGroup
+                        ? 'border-yellow-400/30'
+                        : 'border-white/20 hover:bg-white/15'
+                    }`}
                   >
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        student.isGroupFull
+                          ? 'bg-gradient-to-br from-red-500 to-red-600'
+                          : student.isInGroup
+                          ? 'bg-gradient-to-br from-yellow-500 to-orange-600'
+                          : 'bg-gradient-to-br from-blue-500 to-purple-600'
+                      }`}>
                         <span className="text-white font-medium">
                           {student.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
                         </span>
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <h4 className="font-medium text-white">{student.full_name}</h4>
                         <p className="text-sm text-blue-200">ID: {student.student_id}</p>
                       </div>
+                      {/* Group Status Badge */}
+                      {student.isGroupFull && (
+                        <Badge className="bg-red-500/20 text-red-300 border border-red-400/30 flex items-center gap-1">
+                          <Lock className="w-3 h-3" />
+                          Full
+                        </Badge>
+                      )}
+                      {student.isInGroup && !student.isGroupFull && (
+                        <Badge className="bg-yellow-500/20 text-yellow-300 border border-yellow-400/30">
+                          In Group
+                        </Badge>
+                      )}
                     </div>
                     
                     <div className="space-y-2 text-sm text-blue-200">
@@ -390,15 +489,45 @@ export default function SelectPartnersUpdated() {
                         <span>Department:</span>
                         <span>{student.department}</span>
                       </div>
+                      {student.isInGroup && (
+                        <div className="flex justify-between">
+                          <span>Group:</span>
+                          <span className="text-xs">{student.memberCount}/3 members</span>
+                        </div>
+                      )}
                     </div>
 
                     <Button
                       onClick={() => inviteStudent(student)}
-                      disabled={!currentUser?.is_group_admin || groupMembers.length >= 2}
-                      className="w-full mt-4 bg-blue-500 hover:bg-blue-600"
+                      disabled={
+                        !currentUser?.is_group_admin || 
+                        groupMembers.length >= 2 ||
+                        student.isGroupFull
+                      }
+                      className={`w-full mt-4 ${
+                        student.isGroupFull
+                          ? 'bg-red-500/20 border border-red-400/30 text-red-300 cursor-not-allowed'
+                          : student.isInGroup
+                          ? 'bg-yellow-500/20 border border-yellow-400/30 text-yellow-300'
+                          : 'bg-blue-500 hover:bg-blue-600'
+                      }`}
                     >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Invite to Group
+                      {student.isGroupFull ? (
+                        <>
+                          <Lock className="w-4 h-4 mr-2" />
+                          Group Full
+                        </>
+                      ) : student.isInGroup ? (
+                        <>
+                          <Users className="w-4 h-4 mr-2" />
+                          Already in Group
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Invite to Group
+                        </>
+                      )}
                     </Button>
                   </motion.div>
                 ))}

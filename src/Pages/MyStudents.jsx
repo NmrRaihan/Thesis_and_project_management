@@ -66,8 +66,8 @@ export default function MyStudents() {
   };
 
   const getGroupStudents = (group) => {
-    if (!group?.member_ids) return [];
-    return group.member_ids.map(id => students[id]).filter(Boolean);
+    if (!group?.members || !Array.isArray(group.members)) return [];
+    return group.members.map(member => students[member.student_id]).filter(Boolean);
   };
 
   if (loading) {
@@ -157,23 +157,31 @@ export default function MyStudents() {
 
                     {/* Students */}
                     <div className="mb-4">
-                      <p className="text-xs text-blue-300 mb-2">Team Members</p>
+                      <p className="text-xs text-blue-300 mb-2">Team Members ({groupStudents.length})</p>
                       <div className="space-y-2">
                         {groupStudents.map((student) => (
-                          <div key={student.id} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg border border-white/10">
-                            <Avatar className="w-9 h-9">
+                          <div key={student.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-all">
+                            <Avatar className="w-10 h-10">
                               <AvatarImage src={student.profile_photo} />
-                              <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                              <AvatarFallback className="text-sm bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
                                 {student.full_name?.charAt(0)}
                               </AvatarFallback>
                             </Avatar>
-                            <div>
-                              <p className="text-sm font-medium text-white">{student.full_name}</p>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-white truncate">{student.full_name}</p>
                               <p className="text-xs text-blue-200">{student.student_id}</p>
+                              {student.department && (
+                                <p className="text-xs text-blue-300 mt-0.5">{student.department}</p>
+                              )}
                             </div>
-                            {student.is_group_admin && (
-                              <Badge className="ml-auto text-xs bg-blue-500/20 text-blue-300 border border-blue-400/30">Admin</Badge>
-                            )}
+                            <div className="flex flex-col items-end gap-1">
+                              {student.is_group_admin && (
+                                <Badge className="text-xs bg-blue-500/20 text-blue-300 border border-blue-400/30">Leader</Badge>
+                              )}
+                              <Badge className="text-xs bg-green-500/20 text-green-300 border border-green-400/30 capitalize">
+                                {student.status || 'active'}
+                              </Badge>
+                            </div>
                           </div>
                         ))}
                       </div>

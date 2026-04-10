@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, 
   FileText, 
@@ -26,6 +26,24 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileEditModal from '@/components/profile/ProfileEditModal';
+import { cn } from '@/utils';
+
+// Helper function to format time ago
+const getTimeAgo = (date) => {
+  if (!date) return 'Unknown';
+  const now = new Date();
+  const msgDate = new Date(date);
+  const diffMs = now - msgDate;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return msgDate.toLocaleDateString();
+};
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
@@ -35,8 +53,11 @@ export default function StudentDashboard() {
   const [groupMembers, setGroupMembers] = useState([]);
   const [proposal, setProposal] = useState(null);
   const [pendingInvites, setPendingInvites] = useState([]);
+  const [sentInvites, setSentInvites] = useState([]);
   const [requests, setRequests] = useState([]);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [lastMessageCount, setLastMessageCount] = useState(0);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('currentUser'));
@@ -46,44 +67,321 @@ export default function StudentDashboard() {
     }
     setCurrentUser(user);
     loadData(user);
+    
+    // Check for new messages immediately
+    checkForNewMessages(user);
+    
+    // Set up polling to refresh data every 2 seconds
+    const intervalId = setInterval(() => {
+      const currentUserData = JSON.parse(localStorage.getItem('currentUser'));
+      if (currentUserData) {
+        loadData(currentUserData);
+        checkForNewMessages(currentUserData);
+      }
+    }, 2000);
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, []); // Only run once on mount
 
   const loadData = async (user) => {
     setLoading(true);
     
-    // Load group if exists
+    // Verify group_id is still valid
     if (user.group_id) {
-      const groups = await db.entities.StudentGroup.filter({ id: user.group_id });
-      if (groups.length > 0) {
-        setGroup(groups[0]);
+      try {
+        const groups = await db.entities.StudentGroup.filter({ id: user.group_id });
         
-        // Load group members
-        const members = await db.entities.Student.filter({ group_id: groups[0].group_id });
+        if (groups.length === 0) {
+          // Group was deleted or student was removed
+          console.log('Group no longer exists, updating localStorage...');
+          
+          const updatedUser = { 
+            ...user, 
+            group_id: null, 
+            is_group_admin: false 
+          };
+          
+          localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+          setCurrentUser(updatedUser);
+          
+          toast.info('Your group membership has been updated. You can now select new partners.');
+          
+          // Load pending invitations for ungrouped student
+          const invites = await db.entities.GroupInvitation.filter({ 
+            to_student_id: user.student_id,
+            status: 'pending'
+          });
+          setPendingInvites(invites);
+          
+          // Load sent invitations (ALWAYS load these)
+          const allSent = await db.entities.GroupInvitation.filter({ 
+            from_student_id: user.student_id
+          });
+          
+          // Deduplicate: Keep only the latest invitation per student
+          const uniqueSent = [];
+          const seenStudents = new Map();
+          allSent.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
+          for (const invite of allSent) {
+            if (!seenStudents.has(invite.to_student_id)) {
+              seenStudents.set(invite.to_student_id, true);
+              uniqueSent.push(invite);
+            }
+          }
+          setSentInvites(uniqueSent);
+          
+          setLoading(false);
+          return; // Exit early, no group to load
+        }
+        
+        // Group exists, continue normal loading
+        const group = groups[0];
+        setGroup(group);
+        
+        console.log('Student Dashboard - Group loaded:', {
+          groupId: group.id,
+          groupName: group.group_name,
+          status: group.status,
+          assigned_teacher_id: group.assigned_teacher_id,
+          supervisor_name: group.supervisor_name
+        });
+        
+        // Load group members - query by group_id to get all students in the group
+        const members = await db.entities.Student.filter({ group_id: group.id });
+        
         // Ensure correct admin status based on group's leader information
         const updatedMembers = members.map(member => ({
           ...member,
-          is_group_admin: member.student_id === groups[0].leader_student_id
+          is_group_admin: member.student_id === group.leader_student_id
         }));
         setGroupMembers(updatedMembers);
         
         // Load proposal
-        const proposals = await db.entities.Proposal.filter({ group_id: groups[0].id });
-        if (proposals.length > 0) setProposal(proposals[0]);
+        const proposals = await db.entities.Proposal.filter({ group_id: group.id });
+        if (proposals.length > 0) {
+          const proposal = proposals[0];
+          setProposal(proposal);
+          
+          // Check if proposal was rejected
+          if (proposal.status === 'rejected') {
+            console.log('Proposal was rejected, freeing student...');
+            
+            // Update student record in database
+            await db.entities.Student.update(user.id, {
+              group_id: null,
+              is_group_admin: false
+            });
+            
+            // Update localStorage
+            const updatedUser = { 
+              ...user, 
+              group_id: null, 
+              is_group_admin: false 
+            };
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+            setCurrentUser(updatedUser);
+            
+            toast.info('Your proposal was rejected. You can now select new partners.');
+            
+            // Clear group state
+            setGroup(null);
+            setGroupMembers([]);
+            setProposal(null);
+            
+            // Load pending invitations for ungrouped student
+            const invites = await db.entities.GroupInvitation.filter({ 
+              to_student_id: user.student_id,
+              status: 'pending'
+            });
+            setPendingInvites(invites);
+            
+            // Load sent invitations (ALWAYS load these)
+            const allSent = await db.entities.GroupInvitation.filter({ 
+              from_student_id: user.student_id
+            });
+            
+            // Deduplicate: Keep only the latest invitation per student
+            const uniqueSent = [];
+            const seenStudents = new Map();
+            allSent.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
+            for (const invite of allSent) {
+              if (!seenStudents.has(invite.to_student_id)) {
+                seenStudents.set(invite.to_student_id, true);
+                uniqueSent.push(invite);
+              }
+            }
+            setSentInvites(uniqueSent);
+            
+            setLoading(false);
+            return;
+          }
+        }
         
         // Load supervision requests
-        const reqs = await db.entities.SupervisionRequest.filter({ group_id: groups[0].id });
+        const reqs = await db.entities.SupervisionRequest.filter({ group_id: group.id });
         setRequests(reqs);
+        
+      } catch (error) {
+        console.error('Error verifying group:', error);
+        // On error, assume group is invalid
+        const updatedUser = { ...user, group_id: null, is_group_admin: false };
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        setCurrentUser(updatedUser);
+        toast.error('Error loading group data. Please refresh.');
+            
+        // Still load invitations even on error
+        const invites = await db.entities.GroupInvitation.filter({ 
+          to_student_id: user.student_id,
+          status: 'pending'
+        });
+        setPendingInvites(invites);
+            
+        // Load sent invitations (ALWAYS load these)
+        const allSent = await db.entities.GroupInvitation.filter({ 
+          from_student_id: user.student_id
+        });
+            
+        // Deduplicate: Keep only the latest invitation per student
+        const uniqueSent = [];
+        const seenStudents = new Map();
+        allSent.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
+        for (const invite of allSent) {
+          if (!seenStudents.has(invite.to_student_id)) {
+            seenStudents.set(invite.to_student_id, true);
+            uniqueSent.push(invite);
+          }
+        }
+        setSentInvites(uniqueSent);
+      }
+          
+      // Load recent group chat messages for preview
+      if (user.group_id) {
+        try {
+          const messages = await db.entities.Message.filter({ 
+            conversation_id: user.group_id,
+            conversation_type: 'group_chat'
+          }, 'created_date');
+              
+          // Get last 5 messages
+          const recent = messages.slice(-5).reverse();
+          setGroupChatPreview(recent);
+          console.log('Loaded group chat preview:', recent.length, 'messages');
+        } catch (error) {
+          console.error('Error loading group chat preview:', error);
+        }
       }
     }
     
-    // Load pending invitations to this student
-    const invites = await db.entities.GroupInvitation.filter({ 
-      to_student_id: user.student_id,
-      status: 'pending'
+    // Load pending invitations to this student (if not already loaded above)
+    if (!user.group_id || pendingInvites.length === 0) {
+      const invites = await db.entities.GroupInvitation.filter({ 
+        to_student_id: user.student_id,
+        status: 'pending'
+      });
+      setPendingInvites(invites);
+    }
+    
+    // Load sent invitations from this student (include all statuses) - FINAL FALLBACK
+    // This ensures sent invites are ALWAYS loaded regardless of code path
+    const allSent = await db.entities.GroupInvitation.filter({ 
+      from_student_id: user.student_id
     });
-    setPendingInvites(invites);
+    
+    console.log('Student Dashboard - Sent invitations loaded:', {
+      studentId: user.student_id,
+      totalInvitations: allSent.length,
+      invitations: allSent.map(inv => ({
+        id: inv.id,
+        to_student_id: inv.to_student_id,
+        status: inv.status,
+        created_at: inv.created_at
+      }))
+    });
+    
+    // Deduplicate: Keep only the latest invitation per student (by created_at date)
+    const uniqueSent = [];
+    const seenStudents = new Map();
+    
+    // Sort by date (newest first)
+    allSent.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt));
+    
+    // Keep only the most recent invitation for each student
+    for (const invite of allSent) {
+      if (!seenStudents.has(invite.to_student_id)) {
+        seenStudents.set(invite.to_student_id, true);
+        uniqueSent.push(invite);
+      }
+    }
+    
+    console.log('Student Dashboard - After deduplication:', {
+      uniqueCount: uniqueSent.length,
+      invites: uniqueSent.map(inv => `${inv.to_student_id} (${inv.status})`)
+    });
+    
+    setSentInvites(uniqueSent);
+    
+    // Check for new messages
+    if (user.group_id) {
+      try {
+        const messages = await db.entities.Message.list();
+        const groupMessages = messages.filter(m => 
+          m.conversation_id === user.group_id && 
+          m.conversation_type === 'group_chat'
+        );
+        
+        // If message count increased, show notification
+        if (groupMessages.length > lastMessageCount && lastMessageCount > 0) {
+          setHasNewMessage(true);
+          console.log('🔔 New message detected!');
+        }
+        
+        setLastMessageCount(groupMessages.length);
+      } catch (error) {
+        console.error('Error checking messages:', error);
+      }
+    }
     
     setLoading(false);
+  };
+
+  const checkForNewMessages = async (user) => {
+    if (!user.group_id) return;
+    
+    try {
+      const messages = await db.entities.Message.list();
+      const groupMessages = messages.filter(m => 
+        m.conversation_id === user.group_id && 
+        m.conversation_type === 'group_chat'
+      );
+      
+      console.log('🔔 Checking messages - Current count:', groupMessages.length, 'Last count:', lastMessageCount, 'Notification showing:', hasNewMessage);
+      
+      // If message count increased, show notification
+      if (groupMessages.length > lastMessageCount && lastMessageCount > 0) {
+        console.log('🔔 New message detected! Showing persistent notification...');
+        setHasNewMessage(true);
+      }
+      
+      // Only update lastMessageCount if notification is NOT showing
+      // This keeps the banner visible until user dismisses it
+      if (!hasNewMessage) {
+        setLastMessageCount(groupMessages.length);
+      } else {
+        console.log('⏸️ Keeping notification visible - not updating count');
+      }
+    } catch (error) {
+      console.error('Error checking messages:', error);
+    }
+  };
+
+  const dismissNewMessage = () => {
+    console.log('✅ User clicked notification - dismissing and updating count');
+    setHasNewMessage(false);
+    // Update count so we're caught up to current messages
+    if (currentUser?.group_id) {
+      checkForNewMessages(currentUser);
+    }
   };
 
   const handleAcceptInvite = async (invite) => {
@@ -91,14 +389,36 @@ export default function StudentDashboard() {
       // Update invitation
       await db.entities.GroupInvitation.update(invite.id, { status: 'accepted' });
       
-      // Update student with group_id
-      await db.entities.Student.update(currentUser.id, { group_id: invite.group_id });
-      
-      // Update group member_ids
+      // Get the group
       const groups = await db.entities.StudentGroup.filter({ id: invite.group_id });
       if (groups.length > 0) {
-        const updatedMembers = [...(groups[0].member_ids || []), currentUser.student_id];
-        await db.entities.StudentGroup.update(invite.group_id, { member_ids: updatedMembers });
+        const group = groups[0];
+        
+        // Update student with group_id
+        await db.entities.Student.update(currentUser.id, { 
+          group_id: group.id
+        });
+        
+        // Add student to group members array if not already present
+        const existingMembers = group.members || [];
+        const isAlreadyMember = existingMembers.some(m => m.student_id === currentUser.student_id);
+        
+        if (!isAlreadyMember) {
+          const updatedMembers = [
+            ...existingMembers,
+            {
+              student_id: currentUser.student_id,
+              full_name: currentUser.full_name,
+              role: 'member'
+            }
+          ];
+          
+          await db.entities.StudentGroup.update(group.id, {
+            ...group,
+            members: updatedMembers,
+            updated_at: new Date().toISOString()
+          });
+        }
       }
       
       // Refresh user data
@@ -166,8 +486,99 @@ export default function StudentDashboard() {
   return (
     <PageBackground>
       <DashboardLayout userType="student" currentPage="StudentDashboard">
-        <div className="max-w-7xl mx-auto space-y-8">
-          {/* Welcome Header */}
+        <div className="space-y-6">
+          {/* New Message Notification Banner */}
+          <AnimatePresence>
+            {hasNewMessage && group && (
+              <motion.div
+                initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                animate={{ 
+                  opacity: 1, 
+                  y: 0, 
+                  scale: 1,
+                  boxShadow: [
+                    '0 0 20px rgba(139, 92, 246, 0.3)',
+                    '0 0 40px rgba(139, 92, 246, 0.6)',
+                    '0 0 20px rgba(139, 92, 246, 0.3)'
+                  ]
+                }}
+                transition={{ 
+                  duration: 0.4,
+                  boxShadow: {
+                    repeat: Infinity,
+                    duration: 2
+                  }
+                }}
+              >
+                <div 
+                  onClick={() => {
+                    dismissNewMessage();
+                    navigate(createPageUrl('GroupChat'));
+                  }}
+                  className="relative overflow-hidden cursor-pointer group rounded-2xl"
+                >
+                  {/* Animated gradient background */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 animate-pulse"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
+                  
+                  <div className="relative p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        {/* Bouncing message icon */}
+                        <motion.div 
+                          animate={{ 
+                            scale: [1, 1.1, 1],
+                            rotate: [0, 5, -5, 0]
+                          }}
+                          transition={{ 
+                            duration: 1.5,
+                            repeat: Infinity
+                          }}
+                          className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center"
+                        >
+                          <MessageSquare className="w-7 h-7 text-white" />
+                        </motion.div>
+                        <div>
+                          <motion.h3 
+                            className="text-2xl font-bold text-white mb-1"
+                            animate={{ scale: [1, 1.02, 1] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                          >
+                            💬 New Message Received!
+                          </motion.h3>
+                          <p className="text-white/90 text-base">
+                            Someone from <span className="font-semibold">{group.group_name || 'your group'}</span> sent you a message - Click to view!
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <motion.span 
+                          className="text-white/90 text-sm font-medium hidden sm:block"
+                          animate={{ opacity: [0.7, 1, 0.7] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                        >
+                          Click anywhere to open chat →
+                        </motion.span>
+                        <motion.div 
+                          className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center"
+                          whileHover={{ scale: 1.2, rotate: 360 }}
+                          transition={{ duration: 0.5 }}
+                        >
+                          <ArrowRight className="w-6 h-6 text-white" />
+                        </motion.div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Extra glow effect */}
+                  <div className="absolute inset-0 rounded-2xl shadow-[0_0_30px_rgba(139,92,246,0.5)] pointer-events-none"></div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Welcome Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -209,6 +620,19 @@ export default function StudentDashboard() {
                   Edit Profile
                 </Button>
                 
+                {/* Show group status badge */}
+                {group && (
+                  <Badge className={`px-4 py-2 text-sm ${
+                    group.status === 'active' ? 'bg-green-500 text-white' :
+                    group.status === 'supervised' ? 'bg-purple-500 text-white' :
+                    group.status === 'forming' ? 'bg-yellow-500 text-white' :
+                    'bg-gray-500 text-white'
+                  }`}>
+                    {group.status === 'active' && <CheckCircle className="w-4 h-4 mr-2" />}
+                    {group.status.charAt(0).toUpperCase() + group.status.slice(1)}
+                  </Badge>
+                )}
+                
                 {group?.status === 'supervised' && (
                   <Badge className="bg-green-500 text-white px-4 py-2 text-sm">
                     <CheckCircle className="w-4 h-4 mr-2" />
@@ -218,6 +642,34 @@ export default function StudentDashboard() {
               </div>
             </div>
           </motion.div>
+
+          {/* Assigned Teacher Section */}
+          {group && group.assigned_teacher_id && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+            >
+              <Card className="p-6 bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border border-purple-400/30 backdrop-blur">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
+                      <GraduationCap className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Assigned Supervisor</h2>
+                      <p className="text-purple-200 text-lg">{group.supervisor_name || 'Loading...'}</p>
+                      <p className="text-purple-300 text-sm mt-1">Teacher ID: {group.assigned_teacher_id}</p>
+                    </div>
+                  </div>
+                  <Badge className="bg-green-500/30 text-green-200 border-green-400/50 px-4 py-2">
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Connected
+                  </Badge>
+                </div>
+              </Card>
+            </motion.div>
+          )}
 
           {/* Pending Invitations */}
           {pendingInvites.length > 0 && (
@@ -253,6 +705,51 @@ export default function StudentDashboard() {
                         >
                           Decline
                         </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Sent Invitations */}
+          {sentInvites.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+            >
+              <Card className="p-6 bg-blue-500/10 border border-blue-400/30">
+                <div className="flex items-center gap-3 mb-4">
+                  <Send className="w-5 h-5 text-blue-400" />
+                  <h2 className="font-semibold text-white">Sent Invitations ({sentInvites.length})</h2>
+                </div>
+                <div className="space-y-3">
+                  {sentInvites.map((invite) => (
+                    <div key={invite.id} className="flex items-center justify-between bg-white/10 backdrop-blur border border-white/20 p-4 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${
+                          invite.status === 'accepted' ? 'bg-green-400' :
+                          invite.status === 'declined' ? 'bg-red-400' :
+                          'bg-yellow-400'
+                        }`} />
+                        <div>
+                          <p className="font-medium text-white">Invitation to: {invite.to_student_id}</p>
+                          <p className="text-sm text-blue-200">
+                            Status: 
+                            <Badge className={`ml-2 ${
+                              invite.status === 'accepted' ? 'bg-green-500/20 text-green-300 border-green-400/30' :
+                              invite.status === 'declined' ? 'bg-red-500/20 text-red-300 border-red-400/30' :
+                              'bg-yellow-500/20 text-yellow-300 border-yellow-400/30'
+                            }`}>
+                              {invite.status.charAt(0).toUpperCase() + invite.status.slice(1)}
+                            </Badge>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-xs text-blue-300">
+                        {new Date(invite.created_at).toLocaleDateString()}
                       </div>
                     </div>
                   ))}
@@ -328,6 +825,7 @@ export default function StudentDashboard() {
           >
             <h2 className="text-xl font-semibold text-white mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Show Create Group only if no group exists */}
               {!group && !currentUser?.group_id && (
                 <button onClick={() => navigate('/student/create-group-request')}>
                   <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-blue-400/50">
@@ -344,7 +842,8 @@ export default function StudentDashboard() {
                 </button>
               )}
               
-              {currentUser?.is_group_admin && currentUser?.group_id && (
+              {/* Show Invite Students only for group leaders with inactive groups */}
+              {currentUser?.is_group_admin && currentUser?.group_id && group?.status !== 'active' && (
                 <button onClick={() => navigate('/student/invite-students')}>
                   <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-purple-400/50">
                     <div className="flex items-center gap-4">
@@ -360,6 +859,7 @@ export default function StudentDashboard() {
                 </button>
               )}
               
+              {/* Show Create Proposal for group leaders */}
               {currentUser?.is_group_admin && currentUser?.group_id && (
                 <button onClick={() => navigate('/student/create-group-proposal')}>
                   <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-emerald-400/50">
@@ -376,15 +876,16 @@ export default function StudentDashboard() {
                 </button>
               )}
               
-              {currentUser?.is_group_admin && currentUser?.group_id && currentUser?.group_name && (
-                <button onClick={() => navigate('/student/request-teachers')}>
+              {/* Show Request Teachers/Suggested Teachers when group is ACTIVE */}
+              {currentUser?.is_group_admin && currentUser?.group_id && group?.status === 'active' && (
+                <button onClick={() => navigate('/student/suggested-teachers')}>
                   <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-amber-400/50">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:bg-amber-500 transition-colors">
                         <GraduationCap className="w-6 h-6 text-amber-300 group-hover:text-white" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white">Request Teachers</h3>
+                        <h3 className="font-semibold text-white">Suggested Teachers</h3>
                         <p className="text-sm text-blue-200">Find supervisors</p>
                       </div>
                     </div>
@@ -392,6 +893,7 @@ export default function StudentDashboard() {
                 </button>
               )}
               
+              {/* Show Group Invitations if not in a group */}
               {!currentUser?.group_id && (
                 <button onClick={() => navigate('/student/group-invitations')}>
                   <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-amber-400/50">
@@ -408,6 +910,7 @@ export default function StudentDashboard() {
                 </button>
               )}
               
+              {/* Show Group Chat if in a group */}
               {group && (
                 <Link to={createPageUrl('GroupChat')}>
                   <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-purple-400/50">
@@ -438,19 +941,22 @@ export default function StudentDashboard() {
                 </Card>
               </Link>
               
-              <Link to={createPageUrl('SuggestedTeachers')}>
-                <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-amber-400/50">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:bg-amber-500 transition-colors">
-                      <BookOpen className="w-6 h-6 text-amber-300 group-hover:text-white" />
+              {/* Always show Find Supervisors for students with active groups */}
+              {(group?.status === 'active' || currentUser?.group_id) && (
+                <Link to={createPageUrl('SuggestedTeachers')}>
+                  <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-amber-400/50">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:bg-amber-500 transition-colors">
+                        <BookOpen className="w-6 h-6 text-amber-300 group-hover:text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white">Find Supervisors</h3>
+                        <p className="text-sm text-blue-200">Auto-suggested</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-white">Find Supervisors</h3>
-                      <p className="text-sm text-blue-200">Auto-suggested</p>
-                    </div>
-                  </div>
-                </Card>
-              </Link>
+                  </Card>
+                </Link>
+              )}
             </div>
           </motion.div>
 

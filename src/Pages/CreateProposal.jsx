@@ -59,6 +59,7 @@ export default function CreateProposal() {
   const [currentUser, setCurrentUser] = useState(null);
   const [group, setGroup] = useState(null);
   const [proposal, setProposal] = useState(null);
+  const [teachers, setTeachers] = useState([]);
   const [newKeyword, setNewKeyword] = useState('');
   const [showChatbot, setShowChatbot] = useState(false);
   
@@ -68,7 +69,9 @@ export default function CreateProposal() {
     full_proposal: '',
     project_type: 'thesis',
     field: '',
-    keywords: []
+    keywords: [],
+    preferred_teacher_id: '',
+    preferred_teacher_name: ''
   });
 
   useEffect(() => {
@@ -84,6 +87,14 @@ export default function CreateProposal() {
   const loadData = async (user) => {
     setLoading(true);
     
+    // Load active teachers
+    try {
+      const allTeachers = await db.entities.Teacher.filter({ status: 'active' });
+      setTeachers(allTeachers);
+    } catch (error) {
+      console.error('Error loading teachers:', error);
+    }
+    
     if (user.group_id) {
       const groups = await db.entities.StudentGroup.filter({ id: user.group_id });
       if (groups.length > 0) {
@@ -98,7 +109,9 @@ export default function CreateProposal() {
             full_proposal: proposals[0].full_proposal || '',
             project_type: proposals[0].project_type || 'thesis',
             field: proposals[0].field || '',
-            keywords: proposals[0].keywords || []
+            keywords: proposals[0].keywords || [],
+            preferred_teacher_id: proposals[0].preferred_teacher_id || '',
+            preferred_teacher_name: proposals[0].preferred_teacher_name || ''
           });
         }
       }
@@ -257,6 +270,8 @@ export default function CreateProposal() {
       project_type: formData.project_type,
       field: formData.field,
       keywords: formData.keywords,
+      preferred_teacher_id: formData.preferred_teacher_id || null,
+      preferred_teacher_name: formData.preferred_teacher_name || null,
       status: submit ? 'pending_admin_approval' : 'draft'
     };
     
@@ -316,10 +331,10 @@ export default function CreateProposal() {
                 You need to create or join a group before creating a proposal.
               </p>
               <button
-                onClick={() => navigate(createPageUrl('SelectPartners'))}
+                onClick={() => navigate(createPageUrl('StudentDashboard'))}
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-colors"
               >
-                Select Partners
+                Go to Dashboard
               </button>
             </Card>
           </div>
@@ -411,6 +426,41 @@ export default function CreateProposal() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Preferred Teacher Selection */}
+            {teachers.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-white flex items-center gap-2">
+                  Preferred Supervisor <span className="text-xs text-blue-300">(Optional)</span>
+                </Label>
+                <Select 
+                  value={formData.preferred_teacher_id} 
+                  onValueChange={(value) => {
+                    const selectedTeacher = teachers.find(t => t.teacher_id === value);
+                    setFormData({ 
+                      ...formData, 
+                      preferred_teacher_id: value,
+                      preferred_teacher_name: selectedTeacher ? selectedTeacher.full_name : ''
+                    });
+                  }}
+                >
+                  <SelectTrigger className="h-12 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-blue-200">
+                    <SelectValue placeholder="Select a preferred teacher (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No preference</SelectItem>
+                    {teachers.map(teacher => (
+                      <SelectItem key={teacher.teacher_id} value={teacher.teacher_id}>
+                        {teacher.full_name} - {teacher.department}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-blue-300">
+                  💡 You can suggest a teacher you'd like to work with. The admin will review and assign based on suitability.
+                </p>
+              </div>
+            )}
 
             {/* Title */}
             <div className="space-y-2">

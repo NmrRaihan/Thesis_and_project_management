@@ -65,6 +65,16 @@ export class EntityManager {
   }
 }
 
+// Helper function to convert file to base64
+const fileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
 // Base44 Client
 export const base44 = {
   entities: {
@@ -80,6 +90,22 @@ export const base44 = {
     WeeklyProgress: new EntityManager('WeeklyProgress'),
     SupervisionRequest: new EntityManager('SupervisionRequest'),
     Admin: new EntityManager('Admin'),
+  },
+  integrations: {
+    Core: {
+      // Mock file upload - converts to base64 and stores in localStorage
+      UploadFile: async ({ file }) => {
+        try {
+          const base64 = await fileToBase64(file);
+          // In a real app, you'd upload to cloud storage here
+          // For now, we'll use the base64 data URL as the file_url
+          return { file_url: base64 };
+        } catch (error) {
+          console.error('File upload error:', error);
+          throw new Error('Failed to upload file');
+        }
+      }
+    }
   }
 };
 

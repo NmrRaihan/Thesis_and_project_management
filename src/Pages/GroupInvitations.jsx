@@ -99,26 +99,35 @@ export default function GroupInvitations() {
       const groups = await db.entities.StudentGroup.filter({ group_id: invitation.group_id });
       if (groups.length > 0) {
         const group = groups[0];
-        const updatedMembers = [
-          ...(group.members || []),
-          {
-            student_id: updatedStudent.student_id,
-            full_name: updatedStudent.full_name,
-            role: 'member'
-          }
-        ];
         
-        await db.entities.StudentGroup.update(group.id, {
-          ...group,
-          members: updatedMembers,
-          member_count: updatedMembers.length
-        });
+        // Check if student is already in members array
+        const existingMembers = group.members || [];
+        const isAlreadyMember = existingMembers.some(m => m.student_id === student.student_id);
+        
+        if (!isAlreadyMember) {
+          const updatedMembers = [
+            ...existingMembers,
+            {
+              student_id: updatedStudent.student_id,
+              full_name: updatedStudent.full_name,
+              role: 'member'
+            }
+          ];
+          
+          await db.entities.StudentGroup.update(group.id, {
+            ...group,
+            members: updatedMembers,
+            updated_at: new Date().toISOString()
+          });
+        }
       }
       
       // Update localStorage
       localStorage.setItem('currentUser', JSON.stringify(updatedStudent));
       
       toast.success(`You have joined ${invitation.group_name}!`);
+      
+      // Navigate to dashboard - it will auto-refresh via polling
       navigate('/studentdashboard');
     } catch (error) {
       console.error('Error accepting invitation:', error);

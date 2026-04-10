@@ -69,93 +69,115 @@ export default function AdminTeacherList() {
 
   return (
     <PageBackground>
-      <DashboardLayout userType="admin" currentPage="AdminTeacherList">
-        <div className="min-h-screen relative z-10">
+      <DashboardLayout userType="admin" currentPage="/admin/teachers">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
-          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-t-2xl">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between items-center py-6">
-                <div className="flex items-center space-x-3">
-                  <Button 
-                    onClick={() => navigate(createPageUrl('AdminDashboard'))} 
-                    variant="outline" 
-                    size="sm"
-                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Back to Dashboard
-                  </Button>
-                  <div>
-                    <h1 className="text-2xl font-bold text-white">Teacher Management</h1>
-                    <p className="text-blue-200">Manage all teacher accounts</p>
-                  </div>
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                  <GraduationCap className="w-8 h-8 text-purple-400" />
+                  Teacher Management
+                </h1>
+                <p className="text-blue-200 mt-1">View and manage all teacher accounts</p>
+              </div>
+              <Button 
+                onClick={() => navigate('/admin/dashboard')} 
+                variant="outline"
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Dashboard
+              </Button>
+            </div>
+            
+            {/* Stats */}
+            <Card className="p-4 bg-white/10 backdrop-blur-xl border border-white/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-500/20 rounded-lg">
+                  <GraduationCap className="w-5 h-5 text-purple-400" />
                 </div>
-                <div className="text-sm text-blue-200">
-                  Total Teachers: {teachers.length}
+                <div>
+                  <p className="text-sm text-blue-200">Total Teachers</p>
+                  <p className="text-2xl font-bold text-white">{teachers.length}</p>
                 </div>
               </div>
-            </div>
+            </Card>
           </div>
 
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Teachers Grid */}
           {loading ? (
             <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto"></div>
               <p className="mt-4 text-blue-200">Loading teachers...</p>
             </div>
+          ) : teachers.length === 0 ? (
+            <Card className="p-12 text-center bg-white/10 backdrop-blur-xl border border-white/20">
+              <GraduationCap className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-white mb-2">No Teachers Found</h3>
+              <p className="text-blue-200">There are no teachers registered in the system yet.</p>
+            </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {teachers.map((teacher) => (
                 <Card key={teacher.id} className="p-6 bg-white/10 backdrop-blur-xl border border-white/20 hover:shadow-xl hover:shadow-purple-500/20 transition-all duration-300">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center">
-                          <User className="w-6 h-6 text-white" />
+                  <div className="space-y-4">
+                    {/* Header with Avatar */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                          <span className="text-white font-bold text-lg">
+                            {teacher.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                          </span>
                         </div>
                         <div>
-                          <h3 className="font-semibold text-white">{teacher.full_name}</h3>
-                          <p className="text-sm text-blue-200">{teacher.teacher_id}</p>
+                          <h3 className="font-semibold text-white text-lg">{teacher.full_name}</h3>
+                          <p className="text-sm text-purple-300 flex items-center gap-1">
+                            <IdCard className="w-3 h-3" />
+                            {teacher.teacher_id}
+                          </p>
                         </div>
-                      </div>
-                      
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center text-blue-200">
-                          <Mail className="w-4 h-4 mr-2" />
-                          <span>{teacher.email}</span>
-                        </div>
-                        <div className="flex items-center text-blue-200">
-                          <Building className="w-4 h-4 mr-2" />
-                          <span>{teacher.department}</span>
-                        </div>
-                        <div className="flex items-center text-blue-200">
-                          <IdCard className="w-4 h-4 mr-2" />
-                          <span>Password: {teacher.password_hash}</span>
-                        </div>
-                        <div className="flex items-center text-blue-200">
-                          <GraduationCap className="w-4 h-4 mr-2" />
-                          <span>Max Students: {teacher.max_students}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <Badge variant="outline" className="border-purple-400/50 text-purple-200 bg-transparent">
-                          Current: {teacher.current_students_count || 0}
-                        </Badge>
-                        <Badge variant="outline" className="border-purple-400/50 text-purple-200 bg-transparent">
-                          Status: {teacher.status || 'active'}
-                        </Badge>
                       </div>
                     </div>
                     
-                    <div className="flex flex-col space-y-2 ml-4">
+                    {/* Details */}
+                    <div className="space-y-3 pt-3 border-t border-white/10">
+                      <div className="flex items-center text-blue-200">
+                        <Mail className="w-4 h-4 mr-3 text-purple-400" />
+                        <span className="text-sm">{teacher.email || 'N/A'}</span>
+                      </div>
+                      <div className="flex items-center text-blue-200">
+                        <Building className="w-4 h-4 mr-3 text-purple-400" />
+                        <span className="text-sm">{teacher.department || 'N/A'}</span>
+                      </div>
+                      <div className="flex items-center text-blue-200">
+                        <Users className="w-4 h-4 mr-3 text-purple-400" />
+                        <span className="text-sm">
+                          {teacher.current_students_count || 0} / {teacher.max_students || 5} students
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Badges */}
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <Badge className="bg-green-500/20 text-green-300 border border-green-400/30">
+                        {teacher.status || 'active'}
+                      </Badge>
+                      <Badge variant="outline" className="border-purple-400/50 text-purple-300 bg-purple-500/10">
+                        Max: {teacher.max_students || 5}
+                      </Badge>
+                    </div>
+                    
+                    {/* Actions */}
+                    <div className="flex gap-2 pt-3 border-t border-white/10">
                       <Button 
                         size="sm" 
                         variant="outline" 
                         onClick={() => handleViewTeacher(teacher)}
-                        className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                        className="flex-1 bg-purple-500/20 border-purple-400/30 text-purple-200 hover:bg-purple-500/30"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Details
                       </Button>
                       <Button 
                         size="sm" 
@@ -171,17 +193,8 @@ export default function AdminTeacherList() {
               ))}
             </div>
           )}
-          
-          {teachers.length === 0 && !loading && (
-            <div className="text-center py-12">
-              <GraduationCap className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white mb-2">No teachers found</h3>
-              <p className="text-blue-200">There are no teachers in the system yet.</p>
-            </div>
-          )}
         </div>
-      </div>
-    </DashboardLayout>
-  </PageBackground>
-);
+      </DashboardLayout>
+    </PageBackground>
+  );
 }

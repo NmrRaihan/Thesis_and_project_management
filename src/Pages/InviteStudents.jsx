@@ -44,6 +44,14 @@ export default function InviteStudents() {
     
     loadStudents();
     loadSentInvitations();
+    
+    // Set up polling to refresh invitations every 5 seconds
+    const intervalId = setInterval(() => {
+      loadSentInvitations();
+    }, 5000);
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, [navigate]);
 
   const loadStudents = async () => {
@@ -93,9 +101,21 @@ export default function InviteStudents() {
   };
 
   const handleInvite = async (targetStudent) => {
-    // Check if already invited
-    if (sentInvitations.some(inv => inv.to_student_id === targetStudent.student_id)) {
-      toast.error('Already invited this student');
+    // Check if already invited (check database for ALL statuses)
+    const existingInvites = await db.entities.GroupInvitation.filter({
+      group_id: student.group_id,
+      to_student_id: targetStudent.student_id
+    });
+    
+    if (existingInvites.length > 0) {
+      const invite = existingInvites[0];
+      if (invite.status === 'pending') {
+        toast.error('Already invited this student (waiting for response)');
+      } else if (invite.status === 'accepted') {
+        toast.error('This student has already joined your group');
+      } else if (invite.status === 'declined') {
+        toast.error('This student previously declined your invitation');
+      }
       return;
     }
 

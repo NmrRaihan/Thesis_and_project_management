@@ -36,6 +36,17 @@ export default function StudentFiles() {
     }
     setCurrentUser(user);
     loadData(user);
+    
+    // Set up polling to refresh files every 10 seconds
+    const intervalId = setInterval(() => {
+      const currentUserData = JSON.parse(localStorage.getItem('currentUser'));
+      if (currentUserData) {
+        loadData(currentUserData);
+      }
+    }, 10000);
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   const loadData = async (user) => {
@@ -55,28 +66,43 @@ export default function StudentFiles() {
     const uploadedFiles = Array.from(e.target.files);
     if (uploadedFiles.length === 0) return;
     
-    setUploading(true);
-    
-    for (const file of uploadedFiles) {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      
-      await base44.entities.SharedFile.create({
-        group_id: currentUser.group_id,
-        uploaded_by: currentUser.student_id,
-        uploader_type: 'student',
-        uploader_name: currentUser.full_name,
-        file_name: file.name,
-        file_url,
-        file_type: file.type,
-        file_size: file.size,
-        category: 'other'
-      });
+    // Validate file size (max 5MB per file for localStorage)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const oversizedFiles = uploadedFiles.filter(file => file.size > maxSize);
+    if (oversizedFiles.length > 0) {
+      toast.error(`Some files exceed 5MB limit. Please compress or choose smaller files.`);
+      e.target.value = '';
+      return;
     }
     
-    setUploading(false);
-    toast.success('Files uploaded successfully!');
-    loadData(currentUser);
-    e.target.value = '';
+    setUploading(true);
+    
+    try {
+      for (const file of uploadedFiles) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        
+        await base44.entities.SharedFile.create({
+          group_id: currentUser.group_id,
+          uploaded_by: currentUser.student_id,
+          uploader_type: 'student',
+          uploader_name: currentUser.full_name,
+          file_name: file.name,
+          file_url,
+          file_type: file.type,
+          file_size: file.size,
+          category: 'other'
+        });
+      }
+      
+      toast.success(`${uploadedFiles.length} file(s) uploaded successfully!`);
+      loadData(currentUser);
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      toast.error('Failed to upload files. Please try again.');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
   const getFileIcon = (fileType) => {

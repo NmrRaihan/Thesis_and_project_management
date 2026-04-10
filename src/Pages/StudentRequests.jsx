@@ -129,10 +129,10 @@ export default function StudentRequestsEnhanced() {
                 You need to be part of a group to send supervision requests.
               </p>
               <Button 
-                onClick={() => navigate(createPageUrl('SelectPartners'))}
+                onClick={() => navigate(createPageUrl('StudentDashboard'))}
                 className="bg-blue-500 hover:bg-blue-600"
               >
-                Create or Join a Group
+                Go to Dashboard
               </Button>
             </Card>
           </div>

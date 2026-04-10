@@ -41,6 +41,17 @@ export default function TeacherDashboard() {
     }
     setCurrentUser(user);
     loadData(user);
+    
+    // Set up polling to refresh data every 10 seconds
+    const intervalId = setInterval(() => {
+      const currentUserData = JSON.parse(localStorage.getItem('currentUser'));
+      if (currentUserData) {
+        loadData(currentUserData);
+      }
+    }, 10000);
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, []);
 
   const loadData = async (user) => {
@@ -53,15 +64,30 @@ export default function TeacherDashboard() {
     });
     setPendingRequests(requests);
     
-    // Load supervised groups
-    const groups = await db.entities.StudentGroup.filter({ 
-      assigned_teacher_id: user.teacher_id,
-      status: 'supervised'
+    // Load supervised groups - query by assigned_teacher_id (show all statuses)
+    const allGroups = await db.entities.StudentGroup.filter({ 
+      assigned_teacher_id: user.teacher_id
     });
-    setSupervisedGroups(groups);
+    
+    console.log('Teacher Dashboard - Loaded groups:', {
+      teacherId: user.teacher_id,
+      totalGroups: allGroups.length,
+      groups: allGroups.map(g => ({
+        id: g.id,
+        group_name: g.group_name,
+        status: g.status,
+        assigned_teacher_id: g.assigned_teacher_id
+      }))
+    });
+    
+    // Filter to show only active/supervised groups
+    const activeGroups = allGroups.filter(g => 
+      g.status === 'supervised' || g.status === 'active'
+    );
+    setSupervisedGroups(activeGroups);
     
     // Update teacher's current student count based on supervised groups
-    const currentStudentCount = groups.reduce((count, group) => count + (group.member_count || group.members?.length || 1), 0);
+    const currentStudentCount = activeGroups.reduce((count, group) => count + (group.member_count || group.members?.length || 1), 0);
     
     // Update the teacher's record in the database with the current count
     if (currentStudentCount !== user.current_students_count) {

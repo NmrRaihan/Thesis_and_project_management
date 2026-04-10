@@ -55,8 +55,8 @@ export default function TaskBoard() {
     setLoading(true);
     
     try {
-      // Load all tasks created by this teacher
-      const teacherTasks = await base44.entities.Task.filter({ created_by_teacher_id: user.teacher_id });
+      // Load all tasks created by this teacher using correct field name
+      const teacherTasks = await base44.entities.Task.filter({ teacher_id: user.teacher_id });
       setTasks(teacherTasks);
       
       // Load all groups supervised by this teacher
@@ -80,9 +80,13 @@ export default function TaskBoard() {
     
     try {
       await base44.entities.Task.create({
-        ...newTask,
-        created_by_teacher_id: currentUser.teacher_id,
-        status: 'todo',
+        group_id: newTask.assigned_to_group_id,  // Use correct field name
+        teacher_id: currentUser.teacher_id,       // Use correct field name
+        title: newTask.title,
+        description: newTask.description,
+        due_date: newTask.due_date,
+        priority: newTask.priority,
+        status: 'pending',  // Match entity enum
         created_at: new Date().toISOString()
       });
       
@@ -136,15 +140,16 @@ export default function TaskBoard() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'todo': return 'bg-slate-500/20 text-slate-300 border-slate-400/30';
+      case 'pending': return 'bg-slate-500/20 text-slate-300 border-slate-400/30';
       case 'in_progress': return 'bg-blue-500/20 text-blue-300 border-blue-400/30';
       case 'completed': return 'bg-green-500/20 text-green-300 border-green-400/30';
+      case 'overdue': return 'bg-red-500/20 text-red-300 border-red-400/30';
       default: return 'bg-slate-500/20 text-slate-300 border-slate-400/30';
     }
   };
 
   const groupedTasks = {
-    todo: tasks.filter(task => task.status === 'todo'),
+    todo: tasks.filter(task => task.status === 'pending'),  // Use 'pending' instead of 'todo'
     in_progress: tasks.filter(task => task.status === 'in_progress'),
     completed: tasks.filter(task => task.status === 'completed')
   };
@@ -424,7 +429,7 @@ export default function TaskBoard() {
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        onClick={() => updateTaskStatus(task.id, 'todo')}
+                        onClick={() => updateTaskStatus(task.id, 'pending')}
                         className="text-xs border-white/30 text-white hover:bg-white/10"
                       >
                         Back
@@ -487,7 +492,7 @@ export default function TaskBoard() {
                       <Button 
                         size="sm" 
                         variant="outline" 
-                        onClick={() => updateTaskStatus(task.id, 'todo')}
+                        onClick={() => updateTaskStatus(task.id, 'pending')}
                         className="text-xs border-white/30 text-white hover:bg-white/10"
                       >
                         Reopen
