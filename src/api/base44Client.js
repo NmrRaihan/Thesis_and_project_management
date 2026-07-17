@@ -90,6 +90,9 @@ export const base44 = {
     WeeklyProgress: new EntityManager('WeeklyProgress'),
     SupervisionRequest: new EntityManager('SupervisionRequest'),
     Admin: new EntityManager('Admin'),
+    ThesisCompletionRequest: new EntityManager('ThesisCompletionRequest'),
+    RegistrationSettings: new EntityManager('RegistrationSettings'),
+    DefenseRegistration: new EntityManager('DefenseRegistration'),
   },
   integrations: {
     Core: {

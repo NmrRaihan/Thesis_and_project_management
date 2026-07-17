@@ -9,19 +9,10 @@ import { toast } from 'sonner';
 import { 
   Users, 
   GraduationCap, 
-  FileText, 
-  Calendar, 
-  MessageSquare, 
-  File, 
-  Eye, 
-  Edit, 
-  Trash2, 
-  Download,
+  Trash2,
   UserMinus,
   Shield,
   Clock,
-  CheckCircle,
-  XCircle,
   ArrowLeft,
   Mail,
   Building,
@@ -32,7 +23,7 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
 export default function AdminStudentGroupDetail() {
   const navigate = useNavigate();
-  const { groupId } = useParams();
+  const { groupId } = useParams();  // Must match route param :groupId
   const [group, setGroup] = useState(null);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,9 +49,8 @@ export default function AdminStudentGroupDetail() {
     try {
       setLoading(true);
       
-      // Get the specific group
-      const allGroups = await db.entities.StudentGroup.list();
-      const foundGroup = allGroups.find(g => g.group_id === groupId);
+      // Get the specific group by database ID
+      const foundGroup = await db.entities.StudentGroup.findById(groupId);
       
       if (!foundGroup) {
         toast.error('Group not found');
@@ -70,10 +60,11 @@ export default function AdminStudentGroupDetail() {
       
       setGroup(foundGroup);
       
-      // Get all students to find group members
+      // Get all students to find group members by database ID
+      // (students store the database id in their group_id field)
       const allStudents = await db.entities.Student.list();
       const groupMembers = allStudents.filter(student => 
-        student.group_id === groupId
+        student.group_id === foundGroup.id
       );
       setStudents(groupMembers);
       
@@ -110,12 +101,8 @@ export default function AdminStudentGroupDetail() {
             member_count: (group.member_count || students.length) - 1
           };
           
-          // Update the group record
-          const allGroups = await db.entities.StudentGroup.list();
-          const groupToUpdate = allGroups.find(g => g.group_id === groupId);
-          if (groupToUpdate) {
-            await db.entities.StudentGroup.update(groupToUpdate.id, updatedGroup);
-          }
+          // Update the group record using database id
+          await db.entities.StudentGroup.update(groupId, updatedGroup);
           
           toast.success('Student removed from group successfully');
           loadGroupDetails(); // Refresh the data
@@ -141,12 +128,8 @@ export default function AdminStudentGroupDetail() {
           });
         }
         
-        // Delete the group
-        const allGroups = await db.entities.StudentGroup.list();
-        const groupToDelete = allGroups.find(g => g.group_id === groupId);
-        if (groupToDelete) {
-          await db.entities.StudentGroup.delete(groupToDelete.id);
-        }
+        // Delete the group using database id
+        await db.entities.StudentGroup.delete(groupId);
         
         toast.success('Group disbanded successfully');
         navigate('/admin/groups');
@@ -154,44 +137,6 @@ export default function AdminStudentGroupDetail() {
         console.error('Error disbanding group:', error);
         toast.error('Failed to disband group');
       }
-    }
-  };
-
-  const handleActivateGroup = async () => {
-    try {
-      const allGroups = await db.entities.StudentGroup.list();
-      const groupToUpdate = allGroups.find(g => g.group_id === groupId);
-      
-      if (groupToUpdate) {
-        await db.entities.StudentGroup.update(groupToUpdate.id, {
-          status: 'active'
-        });
-        
-        toast.success('Group activated successfully! Students can now create proposals.');
-        loadGroupDetails(); // Refresh data
-      }
-    } catch (error) {
-      console.error('Error activating group:', error);
-      toast.error('Failed to activate group');
-    }
-  };
-
-  const handleDeactivateGroup = async () => {
-    try {
-      const allGroups = await db.entities.StudentGroup.list();
-      const groupToUpdate = allGroups.find(g => g.group_id === groupId);
-      
-      if (groupToUpdate) {
-        await db.entities.StudentGroup.update(groupToUpdate.id, {
-          status: 'inactive'
-        });
-        
-        toast.success('Group deactivated');
-        loadGroupDetails(); // Refresh data
-      }
-    } catch (error) {
-      console.error('Error deactivating group:', error);
-      toast.error('Failed to deactivate group');
     }
   };
 
@@ -390,30 +335,8 @@ export default function AdminStudentGroupDetail() {
           <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20">
             <h2 className="text-xl font-semibold text-white mb-4">Group Actions</h2>
             <div className="flex flex-wrap gap-3">
-              {group.status === 'active' && (
-                <Button 
-                  onClick={handleDeactivateGroup}
-                  variant="outline"
-                  className="bg-amber-500/20 border-amber-400/30 text-amber-200 hover:bg-amber-500/30"
-                >
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Deactivate Group
-                </Button>
-              )}
-              
-              {group.status === 'inactive' && (
-                <Button 
-                  onClick={handleActivateGroup}
-                  variant="outline"
-                  className="bg-green-500/20 border-green-400/30 text-green-200 hover:bg-green-500/30"
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Activate Group
-                </Button>
-              )}
-              
               <Button 
-                onClick={handleDeleteGroup}
+                onClick={handleDisbandGroup}
                 variant="outline"
                 className="bg-red-500/20 border-red-400/30 text-red-200 hover:bg-red-500/30"
               >

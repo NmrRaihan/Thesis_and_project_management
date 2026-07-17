@@ -1,0 +1,104 @@
+{
+  "name": "ThesisCompletionRequest",
+  "type": "object",
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "description": "Unique request identifier"
+    },
+    "student_id": {
+      "type": "string",
+      "description": "Student submitting the request"
+    },
+    "student_name": {
+      "type": "string",
+      "description": "Student's full name"
+    },
+    "group_id": {
+      "type": "string",
+      "description": "Reference to student's group"
+    },
+    "group_name": {
+      "type": "string",
+      "description": "Name of the group"
+    },
+    "proposal_id": {
+      "type": "string",
+      "description": "Reference to the proposal"
+    },
+    "proposal_title": {
+      "type": "string",
+      "description": "Title of the thesis/project"
+    },
+    "teacher_id": {
+      "type": "string",
+      "description": "Supervising teacher's ID"
+    },
+    "teacher_name": {
+      "type": "string",
+      "description": "Supervising teacher's name"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_teacher",
+        "teacher_approved",
+        "teacher_rejected",
+        "pending_admin",
+        "admin_approved",
+        "admin_rejected",
+        "completed"
+      ],
+      "default": "pending_teacher"
+    },
+    "student_notes": {
+      "type": "string",
+      "description": "Notes from student when submitting"
+    },
+    "attachments": {
+      "type": "array",
+      "description": "Files attached by student (thesis document, reports, etc.)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "size": {"type": "number"},
+          "type": {"type": "string"},
+          "data": {"type": "string"},
+          "uploadedAt": {"type": "string"}
+        }
+      }
+    },
+    "teacher_feedback": {
+      "type": "string",
+      "description": "Feedback from teacher during review"
+    },
+    "admin_feedback": {
+      "type": "string",
+      "description": "Feedback from admin during final review"
+    },
+    "requested_at": {
+      "type": "string",
+      "description": "Timestamp when request was submitted"
+    },
+    "teacher_reviewed_at": {
+      "type": "string",
+      "description": "Timestamp when teacher reviewed"
+    },
+    "admin_reviewed_at": {
+      "type": "string",
+      "description": "Timestamp when admin reviewed"
+    },
+    "completed_at": {
+      "type": "string",
+      "description": "Timestamp when marked as completed"
+    }
+  },
+  "required": [
+    "request_id",
+    "student_id",
+    "group_id",
+    "proposal_id",
+    "teacher_id"
+  ]
+}

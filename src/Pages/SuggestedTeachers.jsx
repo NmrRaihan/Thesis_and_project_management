@@ -376,7 +376,6 @@ export default function SuggestedTeachersEnhanced() {
                   .join('')
                   .toUpperCase() || 'T';
                 
-                const hasAvailability = (teacher.current_students_count || 0) < (teacher.max_students || 10);
                 const isAssigned = group.assigned_teacher_id === teacher.teacher_id;
                 
                 return (
@@ -425,7 +424,7 @@ export default function SuggestedTeachersEnhanced() {
                         </div>
 
                         {/* Stats Grid */}
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3">
                           <div className="bg-white/5 rounded-lg p-3 border border-white/10">
                             <div className="flex items-center gap-2 mb-1">
                               <BookOpen className="w-4 h-4 text-purple-400" />
@@ -433,19 +432,6 @@ export default function SuggestedTeachersEnhanced() {
                             </div>
                             <p className="text-xl font-bold text-white">
                               {teacher.publications?.length || 0}
-                            </p>
-                          </div>
-                          
-                          <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Users className="w-4 h-4 text-green-400" />
-                              <span className="text-xs text-blue-300">Students</span>
-                            </div>
-                            <p className="text-xl font-bold text-white">
-                              {teacher.current_students_count || 0}/{teacher.max_students || 10}
-                            </p>
-                            <p className={`text-xs mt-1 ${hasAvailability ? 'text-green-400' : 'text-red-400'}`}>
-                              {hasAvailability ? 'Available' : 'Full'}
                             </p>
                           </div>
                         </div>
@@ -521,13 +507,9 @@ export default function SuggestedTeachersEnhanced() {
                                     toast.error('Your proposal must be approved by admin first');
                                     return;
                                   }
-                                  if (!hasAvailability) {
-                                    toast.error('This teacher is currently at full capacity');
-                                    return;
-                                  }
                                   setSelectedTeacher(teacher);
                                 }}
-                                disabled={!isGroupLeader || !proposal || proposal.status !== 'approved' || !hasAvailability}
+                                disabled={!isGroupLeader || !proposal || proposal.status !== 'approved'}
                                 size="sm"
                                 className="h-9 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50"
                               >
@@ -608,7 +590,7 @@ export default function SuggestedTeachersEnhanced() {
                         <TrendingUp className="w-5 h-5 text-purple-400" />
                         Academic Profile
                       </h3>
-                      <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="grid grid-cols-1 gap-4 mb-4">
                         <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg p-4 border border-blue-400/20">
                           <div className="flex items-center gap-2 mb-2">
                             <BookOpen className="w-5 h-5 text-blue-400" />
@@ -616,25 +598,6 @@ export default function SuggestedTeachersEnhanced() {
                           </div>
                           <p className="text-3xl font-bold text-white">
                             {viewingTeacher.publications?.length || 0}
-                          </p>
-                        </div>
-                        
-                        <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-lg p-4 border border-green-400/20">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Users className="w-5 h-5 text-green-400" />
-                            <span className="text-sm text-blue-200">Current Students</span>
-                          </div>
-                          <p className="text-3xl font-bold text-white">
-                            {viewingTeacher.current_students_count || 0} / {viewingTeacher.max_students || 10}
-                          </p>
-                          <p className={`text-xs mt-1 ${
-                            (viewingTeacher.current_students_count || 0) < (viewingTeacher.max_students || 10)
-                              ? 'text-green-400' 
-                              : 'text-red-400'
-                          }`}>
-                            {(viewingTeacher.current_students_count || 0) < (viewingTeacher.max_students || 10)
-                              ? '✓ Available for supervision'
-                              : '✗ At full capacity'}
                           </p>
                         </div>
                       </div>

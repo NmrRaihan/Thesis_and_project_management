@@ -69,9 +69,12 @@ export default function CreateProposal() {
     full_proposal: '',
     project_type: 'thesis',
     field: '',
+    semester: '',
+    year: '',
     keywords: [],
     preferred_teacher_id: '',
-    preferred_teacher_name: ''
+    preferred_teacher_name: '',
+    contact_phone: ''
   });
 
   useEffect(() => {
@@ -109,9 +112,12 @@ export default function CreateProposal() {
             full_proposal: proposals[0].full_proposal || '',
             project_type: proposals[0].project_type || 'thesis',
             field: proposals[0].field || '',
+            semester: proposals[0].semester || '',
+            year: proposals[0].year || '',
             keywords: proposals[0].keywords || [],
             preferred_teacher_id: proposals[0].preferred_teacher_id || '',
-            preferred_teacher_name: proposals[0].preferred_teacher_name || ''
+            preferred_teacher_name: proposals[0].preferred_teacher_name || '',
+            contact_phone: proposals[0].contact_phone || ''
           });
         }
       }
@@ -269,9 +275,12 @@ export default function CreateProposal() {
       full_proposal: formData.full_proposal,
       project_type: formData.project_type,
       field: formData.field,
+      semester: formData.semester,
+      year: formData.year,
       keywords: formData.keywords,
       preferred_teacher_id: formData.preferred_teacher_id || null,
       preferred_teacher_name: formData.preferred_teacher_name || null,
+      contact_phone: formData.contact_phone || null,
       status: submit ? 'pending_admin_approval' : 'draft'
     };
     
@@ -287,6 +296,7 @@ export default function CreateProposal() {
       await db.entities.StudentGroup.update(group.id, { 
         project_type: formData.project_type,
         field_of_interest: formData.field,
+        contact_phone: formData.contact_phone,
         status: 'active'
       });
       
@@ -335,6 +345,32 @@ export default function CreateProposal() {
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-colors"
               >
                 Go to Dashboard
+              </button>
+            </Card>
+          </div>
+        </DashboardLayout>
+      </PageBackground>
+    );
+  }
+
+  // Check if user is the group leader
+  if (group.leader_student_id !== currentUser.student_id) {
+    return (
+      <PageBackground>
+        <DashboardLayout userType="student" currentPage="CreateProposal">
+          <div className="max-w-4xl mx-auto">
+            <Card className="p-12 text-center bg-white/10 backdrop-blur border border-white/20">
+              <FileText className="w-16 h-16 text-amber-300 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-white mb-2">Leader Only</h2>
+              <p className="text-blue-200 mb-6">
+                Only the group leader can create the proposal. Please contact your leader.
+              </p>
+              <button
+                onClick={() => navigate(createPageUrl('StudentMessages'))}
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-colors"
+              >
+                <MessageCircle className="w-5 h-5" />
+                Go to Messages
               </button>
             </Card>
           </div>
@@ -427,6 +463,39 @@ export default function CreateProposal() {
               </Select>
             </div>
 
+            {/* Semester and Year Selection */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-white">Semester</Label>
+                <Select value={formData.semester} onValueChange={(v) => setFormData({ ...formData, semester: v })}>
+                  <SelectTrigger className="h-12 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-blue-200">
+                    <SelectValue placeholder="Select semester" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Spring">Spring</SelectItem>
+                    <SelectItem value="Summer">Summer</SelectItem>
+                    <SelectItem value="Fall">Fall</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-white">Academic Year</Label>
+                <Select value={formData.year} onValueChange={(v) => setFormData({ ...formData, year: v })}>
+                  <SelectTrigger className="h-12 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-blue-200">
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 5 }, (_, i) => {
+                      const currentYear = new Date().getFullYear();
+                      const year = currentYear + i;
+                      return <SelectItem key={year} value={year.toString()}>{year}</SelectItem>;
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             {/* Preferred Teacher Selection */}
             {teachers.length > 0 && (
               <div className="space-y-2">
@@ -461,6 +530,24 @@ export default function CreateProposal() {
                 </p>
               </div>
             )}
+
+            {/* Contact Phone Number */}
+            <div className="space-y-2">
+              <Label className="text-white flex items-center gap-2">
+                Contact Phone Number <span className="text-red-400">*</span>
+              </Label>
+              <Input
+                type="tel"
+                value={formData.contact_phone}
+                onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                placeholder="e.g., +880-1234-567890"
+                className="h-12 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-blue-200"
+                required
+              />
+              <p className="text-xs text-blue-300">
+                📞 This number will be used by teachers to contact you regarding your proposal.
+              </p>
+            </div>
 
             {/* Title */}
             <div className="space-y-2">
@@ -609,7 +696,7 @@ export default function CreateProposal() {
           </Button>
           <Button
             onClick={() => saveProposal(true)}
-            disabled={saving || !formData.title || !formData.full_proposal}
+            disabled={saving || !formData.title || !formData.description}
             className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl"
           >
             {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Send className="w-5 h-5 mr-2" />}

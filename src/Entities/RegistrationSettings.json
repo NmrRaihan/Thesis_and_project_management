@@ -1,0 +1,35 @@
+{
+  "name": "RegistrationSettings",
+  "type": "object",
+  "properties": {
+    "student_registration_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable or disable student registration"
+    },
+    "registration_start_time": {
+      "type": "string",
+      "description": "Registration start time (ISO 8601 format)"
+    },
+    "registration_end_time": {
+      "type": "string",
+      "description": "Registration end time (ISO 8601 format)"
+    },
+    "news_ticker_text": {
+      "type": "string",
+      "default": "",
+      "description": "News ticker message to display on home page"
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "Last update timestamp"
+    },
+    "updated_by": {
+      "type": "string",
+      "description": "Admin who last updated settings"
+    }
+  },
+  "required": [
+    "student_registration_enabled"
+  ]
+}

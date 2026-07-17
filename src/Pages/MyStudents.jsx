@@ -16,7 +16,8 @@ import {
   ClipboardList,
   Calendar,
   FolderOpen,
-  ArrowRight
+  ArrowRight,
+  Phone
 } from 'lucide-react';
 import PageBackground from '@/components/ui/PageBackground';
 
@@ -147,11 +148,19 @@ export default function MyStudents() {
                         <p className="text-blue-200 text-sm line-clamp-2">
                           {proposal.description}
                         </p>
-                        {proposal.field && (
-                          <Badge variant="secondary" className="mt-2 bg-white/10 text-white border border-white/20">
-                            {proposal.field}
-                          </Badge>
-                        )}
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {proposal.field && (
+                            <Badge variant="secondary" className="bg-white/10 text-white border border-white/20">
+                              {proposal.field}
+                            </Badge>
+                          )}
+                          {(proposal.contact_phone || group.contact_phone) && (
+                            <Badge variant="secondary" className="bg-green-500/20 text-green-300 border border-green-400/30">
+                              <Phone className="w-3 h-3 mr-1" />
+                              {proposal.contact_phone || group.contact_phone}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     )}
 

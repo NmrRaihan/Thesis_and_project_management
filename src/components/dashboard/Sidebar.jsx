@@ -16,16 +16,21 @@ import {
   FolderOpen,
   ClipboardList,
   TrendingUp,
-  LogOut
+  LogOut,
+  CheckCircle,
+  BookOpen,
+  Settings,
+  Shield
 } from 'lucide-react';
 import { cn } from '@/utils';
+import nubLogo from '@/Pages/Group 18.png';
 
 const studentNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard', page: 'StudentDashboard' },
   { icon: Users, label: 'Select Partners', page: 'SelectPartners' },
   { icon: MessageSquare, label: 'Group Chat', page: 'GroupChat' },
   { icon: FileText, label: 'Create Proposal', page: 'CreateProposal' },
-  { icon: UserCheck, label: 'Suggested Teachers', page: 'SuggestedTeachers' },
+  { icon: UserCheck, label: 'Suggested Teachers', page: '/student/suggested-teachers' },
   { icon: Send, label: 'My Requests', page: 'StudentRequests' },
   { icon: Mail, label: 'Messages', page: 'StudentMessages' },
 ];
@@ -38,6 +43,7 @@ const teacherNavItems = [
   { icon: Calendar, label: 'Meetings', page: 'TeacherMeetings' },
   { icon: FolderOpen, label: 'Shared Files', page: 'TeacherFiles' },
   { icon: TrendingUp, label: 'Progress Tracker', page: 'ProgressTracker' },
+  { icon: CheckCircle, label: 'Completion Review', page: '/teacher/completion-review' },
   { icon: Mail, label: 'Messages', page: 'TeacherMessages' },
 ];
 
@@ -49,6 +55,7 @@ const supervisedStudentNavItems = [
   { icon: Calendar, label: 'Meetings', page: 'StudentMeetings' },
   { icon: FolderOpen, label: 'Shared Files', page: 'StudentFiles' },
   { icon: TrendingUp, label: 'Weekly Progress', page: 'StudentProgress' },
+  { icon: CheckCircle, label: 'Project/Thesis Completion', page: '/student/thesis-completion' },
 ];
 
 const adminNavItems = [
@@ -57,6 +64,12 @@ const adminNavItems = [
   { icon: GraduationCap, label: 'Teachers', page: '/admin/teachers' },
   { icon: Users, label: 'Groups', page: '/admin/groups' },
   { icon: FileText, label: 'Proposals', page: '/admin/proposals' },
+  { icon: FileText, label: 'Projects', page: '/admin/projects' },
+  { icon: BookOpen, label: 'Theses', page: '/admin/theses' },
+  { icon: CheckCircle, label: 'Completed', page: '/admin/completed' },
+  { icon: CheckCircle, label: 'Completion Requests', page: '/admin/completion-review' },
+  { icon: Settings, label: 'Registration Control', page: '/admin/registration-control' },
+  { icon: Shield, label: 'Defense Registration', page: '/admin/defense-registration' },
 ];
 
 export default function Sidebar({ userType, isSupervised, currentPage }) {
@@ -241,12 +254,22 @@ export default function Sidebar({ userType, isSupervised, currentPage }) {
     const hasGroup = currentUser?.group_id;
     const isSupervisedStatus = userGroup?.status === 'supervised';
     
+    // Check if group is full (3 members) or still forming
+    const isGroupFull = userGroup?.members && userGroup.members.length >= 3;
+    const isGroupForming = userGroup?.status === 'forming' && !isGroupFull;
+    
     if (isSupervisedStatus) {
       // Show supervised student navigation
       navItems = supervisedStudentNavItems;
     } else if (hasGroup) {
-      // Has group but not supervised yet - hide Select Partners
-      navItems = studentNavItems.filter(item => item.page !== 'SelectPartners');
+      // Has group - check if still forming or full/active
+      if (isGroupForming) {
+        // Group is forming (< 3 members) - SHOW Select Partners so they can add members
+        navItems = studentNavItems;
+      } else {
+        // Group is full (3 members) or active - hide Select Partners
+        navItems = studentNavItems.filter(item => item.page !== 'SelectPartners');
+      }
     } else {
       // No group - show all options including Select Partners
       navItems = studentNavItems;
@@ -270,12 +293,15 @@ export default function Sidebar({ userType, isSupervised, currentPage }) {
     >
       <div className="p-6 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-            <GraduationCap className="w-5 h-5" />
-          </div>
+          <img 
+            src={nubLogo}
+            alt="NUB Logo" 
+            className="h-12 w-auto object-contain"
+          />
           <div>
-            <h2 className="font-bold text-lg tracking-tight">ThesisHub</h2>
-            <p className="text-xs text-slate-400 capitalize">{userType} Portal</p>
+            <h2 className="font-bold text-base text-white leading-tight">NUB</h2>
+            <p className="text-xs text-blue-300 leading-tight">Thesis & Project Management</p>
+            <p className="text-[10px] text-slate-400 capitalize mt-0.5">{userType} Portal</p>
           </div>
         </div>
       </div>

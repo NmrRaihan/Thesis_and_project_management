@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import { 
   Users, 
   FileText, 
@@ -20,7 +21,9 @@ import {
   Clock,
   Calendar,
   ClipboardList,
-  Edit3
+  Edit3,
+  CheckCircle,
+  Bell
 } from 'lucide-react';
 import ProfileEditModal from '@/components/profile/ProfileEditModal';
 
@@ -29,6 +32,7 @@ export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [pendingCompletionRequests, setPendingCompletionRequests] = useState([]);
   const [supervisedGroups, setSupervisedGroups] = useState([]);
   const [upcomingMeetings, setUpcomingMeetings] = useState([]);
   const [showProfileEdit, setShowProfileEdit] = useState(false);
@@ -63,6 +67,13 @@ export default function TeacherDashboard() {
       status: 'pending'
     });
     setPendingRequests(requests);
+    
+    // Load pending completion requests (Project/Thesis)
+    const allCompletionRequests = await db.entities.ThesisCompletionRequest.list();
+    const pendingCompletions = allCompletionRequests.filter(r => 
+      r.teacher_id === user.teacher_id && r.status === 'pending_teacher'
+    );
+    setPendingCompletionRequests(pendingCompletions);
     
     // Load supervised groups - query by assigned_teacher_id (show all statuses)
     const allGroups = await db.entities.StudentGroup.filter({ 
@@ -150,58 +161,65 @@ export default function TeacherDashboard() {
   return (
     <PageBackground>
       <DashboardLayout userType="teacher" currentPage="TeacherDashboard">
-        <div className="max-w-7xl mx-auto space-y-8">
-        {/* Welcome Header */}
+        <div className="max-w-7xl mx-auto space-y-4">
+        {/* Compact Welcome Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl p-8 text-white relative overflow-hidden"
+          className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-5 text-white relative overflow-hidden"
         >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+          <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
           
-          <div className="relative flex items-center gap-5">
-            <Avatar className="w-20 h-20 border-4 border-white/30 shadow-xl">
+          <div className="relative flex items-center gap-4">
+            <Avatar className="w-14 h-14 border-2 border-white/30 shadow-lg">
               <AvatarImage src={currentUser?.profile_photo} />
-              <AvatarFallback className="text-2xl font-bold bg-white/20 text-white">
+              <AvatarFallback className="text-lg font-bold bg-white/20 text-white">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <h1 className="text-3xl font-bold mb-1 text-white">Welcome, {currentUser?.full_name}!</h1>
-              <p className="text-indigo-100 flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
-                  ID: {currentUser?.teacher_id}
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold mb-1 text-white">Welcome, {currentUser?.full_name}</h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2 py-0.5 bg-white/20 rounded-md text-xs">
+                  {currentUser?.teacher_id}
                 </span>
                 {currentUser?.department && (
-                  <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
+                  <span className="px-2 py-0.5 bg-white/20 rounded-md text-xs">
                     {currentUser?.department}
                   </span>
                 )}
-                <span className="px-2 py-0.5 bg-white/20 rounded-full text-sm">
+                <span className="px-2 py-0.5 bg-white/20 rounded-md text-xs">
                   {currentUser?.research_field}
                 </span>
-              </p>
+              </div>
             </div>
             <Button 
               onClick={() => setShowProfileEdit(true)}
               variant="secondary" 
-              className="ml-auto bg-white/20 hover:bg-white/30 text-white border-white/30"
+              size="sm"
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
             >
-              <Edit3 className="w-4 h-4 mr-2" />
-              Edit Profile
+              <Edit3 className="w-3 h-3 mr-1" />
+              Edit
             </Button>
           </div>
         </motion.div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Stats Grid - Compact */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatCard
             icon={Send}
             label="Pending Requests"
             value={pendingRequests.length}
             iconBg="bg-amber-500"
             delay={0.1}
+          />
+          <StatCard
+            icon={CheckCircle}
+            label="Completion Requests"
+            value={pendingCompletionRequests.length}
+            iconBg="bg-purple-500"
+            delay={0.15}
           />
           <StatCard
             icon={Users}
@@ -226,65 +244,98 @@ export default function TeacherDashboard() {
           />
         </div>
 
-        {/* Quick Actions */}
+        {/* Completion Requests Alert - Compact */}
+        {pendingCompletionRequests.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+          >
+            <Card className="p-4 bg-gradient-to-r from-purple-600/20 to-indigo-600/20 backdrop-blur border border-purple-400/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-500/20 rounded-lg">
+                    <Bell className="w-5 h-5 text-purple-400 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-white">
+                      🔔 {pendingCompletionRequests.length} Project/Thesis Completion {pendingCompletionRequests.length === 1 ? 'Request' : 'Requests'} Pending
+                    </h3>
+                    <p className="text-purple-200 text-sm">
+                      Review and approve student completions
+                    </p>
+                  </div>
+                </div>
+                <Link to="/teacher/completion-review">
+                  <Button size="sm" className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Review
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Quick Actions - Compact */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <h2 className="text-xl font-semibold text-white mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <h2 className="text-lg font-semibold text-white mb-3">Quick Actions</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Link to={createPageUrl('TeacherRequests')}>
-              <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-amber-400/50">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:bg-amber-500 transition-colors">
-                    <Send className="w-6 h-6 text-amber-300 group-hover:text-white" />
+              <Card className="p-4 hover:shadow-lg transition-all duration-200 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-amber-400/50 hover:scale-105">
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center group-hover:bg-amber-500 transition-colors">
+                    <Send className="w-5 h-5 text-amber-300 group-hover:text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white">Review Requests</h3>
-                    <p className="text-sm text-blue-200">{pendingRequests.length} pending</p>
+                    <h3 className="font-medium text-white text-sm">Review Requests</h3>
+                    <p className="text-xs text-blue-200">{pendingRequests.length} pending</p>
                   </div>
                 </div>
               </Card>
             </Link>
             
             <Link to={createPageUrl('MyStudents')}>
-              <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-blue-400/50">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center group-hover:bg-blue-500 transition-colors">
-                    <Users className="w-6 h-6 text-blue-300 group-hover:text-white" />
+              <Card className="p-4 hover:shadow-lg transition-all duration-200 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-blue-400/50 hover:scale-105">
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center group-hover:bg-blue-500 transition-colors">
+                    <Users className="w-5 h-5 text-blue-300 group-hover:text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white">My Students</h3>
-                    <p className="text-sm text-blue-200">View all groups</p>
+                    <h3 className="font-medium text-white text-sm">My Students</h3>
+                    <p className="text-xs text-blue-200">View groups</p>
                   </div>
                 </div>
               </Card>
             </Link>
             
             <Link to={createPageUrl('TaskBoard')}>
-              <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-purple-400/50">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:bg-purple-500 transition-colors">
-                    <ClipboardList className="w-6 h-6 text-purple-300 group-hover:text-white" />
+              <Card className="p-4 hover:shadow-lg transition-all duration-200 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-purple-400/50 hover:scale-105">
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center group-hover:bg-purple-500 transition-colors">
+                    <ClipboardList className="w-5 h-5 text-purple-300 group-hover:text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white">Task Board</h3>
-                    <p className="text-sm text-blue-200">Manage tasks</p>
+                    <h3 className="font-medium text-white text-sm">Task Board</h3>
+                    <p className="text-xs text-blue-200">Manage tasks</p>
                   </div>
                 </div>
               </Card>
             </Link>
             
             <Link to={createPageUrl('TeacherMeetings')}>
-              <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-emerald-400/50">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center group-hover:bg-emerald-500 transition-colors">
-                    <Calendar className="w-6 h-6 text-emerald-300 group-hover:text-white" />
+              <Card className="p-4 hover:shadow-lg transition-all duration-200 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-emerald-400/50 hover:scale-105">
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center group-hover:bg-emerald-500 transition-colors">
+                    <Calendar className="w-5 h-5 text-emerald-300 group-hover:text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white">Meetings</h3>
-                    <p className="text-sm text-blue-200">Schedule & manage</p>
+                    <h3 className="font-medium text-white text-sm">Meetings</h3>
+                    <p className="text-xs text-blue-200">Schedule</p>
                   </div>
                 </div>
               </Card>
@@ -292,22 +343,22 @@ export default function TeacherDashboard() {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Pending Requests */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Pending Requests - Compact */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
           >
-            <Card className="p-6 bg-white/10 backdrop-blur border border-white/20">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-amber-400" />
+            <Card className="p-5 bg-white/10 backdrop-blur border border-white/20">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base font-semibold text-white flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-400" />
                   Pending Requests
                 </h2>
                 <Link to={createPageUrl('TeacherRequests')}>
-                  <Button variant="outline-dark">
-                    View All <ArrowRight className="w-4 h-4 ml-1" />
+                  <Button variant="outline-dark" size="sm">
+                    View All <ArrowRight className="w-3 h-3 ml-1" />
                   </Button>
                 </Link>
               </div>

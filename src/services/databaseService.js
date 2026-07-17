@@ -207,6 +207,22 @@ export const databaseService = {
       create: (data) => db.createEntity('GroupInvitation', data),
       update: (id, data) => db.updateEntity('GroupInvitation', id, data),
       delete: (id) => db.deleteEntity('GroupInvitation', id)
+    },
+    ThesisCompletionRequest: {
+      list: () => db.getEntity('ThesisCompletionRequest'),
+      filter: (criteria) => db.getEntity('ThesisCompletionRequest', criteria),
+      findById: (id) => db.getEntity('ThesisCompletionRequest').then(requests => requests.find(r => r.id === id)),
+      create: (data) => db.createEntity('ThesisCompletionRequest', data),
+      update: (id, data) => db.updateEntity('ThesisCompletionRequest', id, data),
+      delete: (id) => db.deleteEntity('ThesisCompletionRequest', id)
+    },
+    DefenseRegistration: {
+      list: () => db.getEntity('DefenseRegistration'),
+      filter: (criteria) => db.getEntity('DefenseRegistration', criteria),
+      findById: (id) => db.getEntity('DefenseRegistration').then(items => items.find(i => i.id === id)),
+      create: (data) => db.createEntity('DefenseRegistration', data),
+      update: (id, data) => db.updateEntity('DefenseRegistration', id, data),
+      delete: (id) => db.deleteEntity('DefenseRegistration', id)
     }
   }
 };

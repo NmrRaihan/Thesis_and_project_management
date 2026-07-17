@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageBackground from '@/components/ui/PageBackground';
 import { motion } from 'framer-motion';
-import { Search, Users, Plus, CheckCircle, X, Crown, User, Mail, Lock } from 'lucide-react';
+import { Search, Users, Plus, CheckCircle, X, Crown, User, Mail, Lock, UserPlus } from 'lucide-react';
 
 export default function SelectPartnersUpdated() {
   const navigate = useNavigate();
@@ -131,7 +131,7 @@ export default function SelectPartnersUpdated() {
           full_name: currentUser.full_name,
           role: 'leader'
         }],
-        status: 'forming'
+        status: 'forming' // Changed from 'active' to 'forming' - will be activated when group is full
       });
       
       // Update student with group_id and leader status
@@ -234,11 +234,20 @@ export default function SelectPartnersUpdated() {
             }
           ];
           
+          // Check if group is now full (3 members) and activate it
+          const newMemberCount = updatedMembers.length;
+          const newStatus = newMemberCount >= 3 ? 'active' : group.status;
+          
           await db.entities.StudentGroup.update(group.id, {
             ...group,
             members: updatedMembers,
+            status: newStatus, // Activate group when it reaches 3 members
             updated_at: new Date().toISOString()
           });
+          
+          if (newStatus === 'active') {
+            toast.success('Group is now full and activated!');
+          }
         }
         
         const updatedUser = { ...currentUser, group_id: group.id, is_group_admin: false };
@@ -396,8 +405,8 @@ export default function SelectPartnersUpdated() {
             </motion.div>
           )}
 
-          {/* Create Group Button */}
-          {!group && (
+          {/* Create Group Button or Invite Students if group exists */}
+          {!group ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -417,6 +426,41 @@ export default function SelectPartnersUpdated() {
                   <Plus className="w-5 h-5 mr-2" />
                   {creating ? 'Creating...' : 'Create Group'}
                 </Button>
+              </Card>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card className="p-8 text-center bg-white/10 backdrop-blur-lg border-white/20">
+                <Users className="w-12 h-12 text-green-300 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">Group Created!</h3>
+                <p className="text-blue-200 mb-2">
+                  Your group "{group.group_name}" has been created.
+                </p>
+                <p className="text-blue-200 mb-6">
+                  Current members: {groupMembers.length}/3
+                </p>
+                <div className="flex gap-4 justify-center">
+                  {groupMembers.length < 3 && (
+                    <Button
+                      onClick={() => navigate('/student/invite-students')}
+                      className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+                    >
+                      <UserPlus className="w-5 h-5 mr-2" />
+                      Invite Students
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => navigate(createPageUrl('StudentDashboard'))}
+                    variant="outline"
+                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                  >
+                    Go to Dashboard
+                  </Button>
+                </div>
               </Card>
             </motion.div>
           )}

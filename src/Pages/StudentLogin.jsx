@@ -186,7 +186,7 @@ export default function StudentLogin() {
                 </Button>
               </motion.div>
 
-              <p className="text-center text-sm text-blue-200">
+{/*               <p className="text-center text-sm text-blue-200">
                 Don't have an account?{' '}
                 <Link 
                   to={createPageUrl('StudentRegister')} 
@@ -194,7 +194,7 @@ export default function StudentLogin() {
                 >
                   Register
                 </Link>
-              </p>
+              </p> */}
             </form>
           </div>
         </motion.div>

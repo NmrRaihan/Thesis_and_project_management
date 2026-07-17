@@ -22,7 +22,8 @@ import {
   Bell,
   Sparkles,
   Edit3,
-  GraduationCap
+  GraduationCap,
+  Award
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ProfileEditModal from '@/components/profile/ProfileEditModal';
@@ -58,6 +59,7 @@ export default function StudentDashboard() {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [hasNewMessage, setHasNewMessage] = useState(false);
   const [lastMessageCount, setLastMessageCount] = useState(0);
+  const [hasCompletedWork, setHasCompletedWork] = useState(false);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('currentUser'));
@@ -321,6 +323,22 @@ export default function StudentDashboard() {
     
     setSentInvites(uniqueSent);
     
+    // Check if student has completed work
+    try {
+      const completionRequests = await db.entities.ThesisCompletionRequest.list();
+      const studentCompletions = completionRequests.filter(r => 
+        r.student_id === user.student_id && 
+        (r.status === 'completed' || r.status === 'admin_approved')
+      );
+      
+      if (studentCompletions.length > 0) {
+        setHasCompletedWork(true);
+        console.log('Student has completed work - restricting group/proposal creation');
+      }
+    } catch (error) {
+      console.error('Error checking completion status:', error);
+    }
+    
     // Check for new messages
     if (user.group_id) {
       try {
@@ -413,11 +431,20 @@ export default function StudentDashboard() {
             }
           ];
           
+          // Check if group is now full (3 members) and activate it
+          const newMemberCount = updatedMembers.length;
+          const newStatus = newMemberCount >= 3 ? 'active' : group.status;
+          
           await db.entities.StudentGroup.update(group.id, {
             ...group,
             members: updatedMembers,
+            status: newStatus, // Activate group when it reaches 3 members
             updated_at: new Date().toISOString()
           });
+          
+          if (newStatus === 'active') {
+            toast.success('Group is now full and activated!');
+          }
         }
       }
       
@@ -643,6 +670,37 @@ export default function StudentDashboard() {
             </div>
           </motion.div>
 
+          {/* Completed Work Notice */}
+          {hasCompletedWork && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+            >
+              <Card className="p-6 bg-gradient-to-r from-emerald-600/20 to-teal-600/20 backdrop-blur border border-emerald-400/30">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-emerald-500/20 rounded-xl">
+                    <Award className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-white mb-2">
+                      🎉 Congratulations! Your Work is Completed
+                    </h3>
+                    <p className="text-emerald-200 mb-3">
+                      You have successfully completed your project/thesis. Your group has been disbanded. You can view your completion status below.
+                    </p>
+                    <Link to="/student/thesis-completion">
+                      <Button className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700">
+                        <Award className="w-4 h-4 mr-2" />
+                        View Completion Status
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
           {/* Assigned Teacher Section */}
           {group && group.assigned_teacher_id && (
             <motion.div
@@ -825,8 +883,8 @@ export default function StudentDashboard() {
           >
             <h2 className="text-xl font-semibold text-white mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Show Create Group only if no group exists */}
-              {!group && !currentUser?.group_id && (
+              {/* Show Create Group only if no group exists AND no completed work */}
+              {!group && !currentUser?.group_id && !hasCompletedWork && (
                 <button onClick={() => navigate('/student/create-group-request')}>
                   <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-blue-400/50">
                     <div className="flex items-center gap-4">
@@ -842,8 +900,8 @@ export default function StudentDashboard() {
                 </button>
               )}
               
-              {/* Show Invite Students only for group leaders with inactive groups */}
-              {currentUser?.is_group_admin && currentUser?.group_id && group?.status !== 'active' && (
+              {/* Show Invite Students for group leaders with forming/inactive groups AND group not full */}
+              {currentUser?.is_group_admin && currentUser?.group_id && (group?.status === 'forming' || group?.status === 'inactive') && groupMembers.length < 3 && (
                 <button onClick={() => navigate('/student/invite-students')}>
                   <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-purple-400/50">
                     <div className="flex items-center gap-4">
@@ -852,15 +910,30 @@ export default function StudentDashboard() {
                       </div>
                       <div>
                         <h3 className="font-semibold text-white">Invite Students</h3>
-                        <p className="text-sm text-blue-200">Add members to group</p>
+                        <p className="text-sm text-blue-200">Add members to group ({groupMembers.length}/3)</p>
                       </div>
                     </div>
                   </Card>
                 </button>
               )}
               
-              {/* Show Create Proposal for group leaders */}
-              {currentUser?.is_group_admin && currentUser?.group_id && (
+              {/* Show Group Full message for group leaders when group is full */}
+              {currentUser?.is_group_admin && currentUser?.group_id && (group?.status === 'forming' || group?.status === 'inactive') && groupMembers.length >= 3 && (
+                <Card className="p-5 bg-green-500/10 backdrop-blur border border-green-400/30">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                      <CheckCircle className="w-6 h-6 text-green-300" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-green-300">Group Full</h3>
+                      <p className="text-sm text-green-200">All 3 members confirmed ✓</p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+              
+              {/* Show Create Proposal for group leaders AND no completed work */}
+              {currentUser?.is_group_admin && currentUser?.group_id && !hasCompletedWork && (
                 <button onClick={() => navigate('/student/create-group-proposal')}>
                   <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-emerald-400/50">
                     <div className="flex items-center gap-4">
@@ -943,7 +1016,7 @@ export default function StudentDashboard() {
               
               {/* Always show Find Supervisors for students with active groups */}
               {(group?.status === 'active' || currentUser?.group_id) && (
-                <Link to={createPageUrl('SuggestedTeachers')}>
+                <Link to="/student/suggested-teachers">
                   <Card className="p-5 hover:shadow-lg transition-all duration-300 cursor-pointer group bg-white/10 backdrop-blur border border-white/20 hover:border-amber-400/50">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center group-hover:bg-amber-500 transition-colors">

@@ -24,7 +24,9 @@ import {
   Wifi,
   WifiOff,
   AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle,
+  Bell
 } from 'lucide-react';
 import PageBackground from '@/components/ui/PageBackground';
 import { motion } from 'framer-motion';
@@ -57,10 +59,12 @@ export default function AdminDashboard() {
     students: 0,
     teachers: 0,
     groups: 0,
-    proposals: 0
+    proposals: 0,
+    pendingCompletions: 0
   });
   const [groupRequests, setGroupRequests] = useState([]);
   const [supervisionRequests, setSupervisionRequests] = useState([]);
+  const [pendingCompletions, setPendingCompletions] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
   const [lastRefreshTime, setLastRefreshTime] = useState(null);
@@ -132,7 +136,8 @@ export default function AdminDashboard() {
           files,
           progressReports,
           invitations,
-          supervisionRequests
+          supervisionRequests,
+          completionRequests
         ] = await Promise.all([
           db.entities.Student.list(),
           db.entities.Teacher.list(),
@@ -144,16 +149,20 @@ export default function AdminDashboard() {
           db.entities.SharedFile.list(),
           db.entities.WeeklyProgress.list(),
           db.entities.GroupInvitation.list(),
-          db.entities.SupervisionRequest.list()
+          db.entities.SupervisionRequest.list(),
+          db.entities.ThesisCompletionRequest.list()
         ]);
 
         // Set stats
+        const pendingCompletions = completionRequests.filter(r => r.status === 'pending_admin');
         setStats({
           students: students.length,
           teachers: teachers.length,
           groups: groups.length,
-          proposals: proposals.length
+          proposals: proposals.length,
+          pendingCompletions: pendingCompletions.length
         });
+        setPendingCompletions(pendingCompletions);
         
         // Filter group creation requests (status = 'pending' and has group_name)
         const creationRequests = invitations.filter(inv => 
@@ -643,8 +652,44 @@ export default function AdminDashboard() {
         </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Completion Requests Alert */}
+        {pendingCompletions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-6"
+          >
+            <Card className="p-4 bg-gradient-to-r from-purple-600/20 to-indigo-600/20 backdrop-blur-xl border border-purple-400/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-500/20 rounded-lg">
+                    <Bell className="w-5 h-5 text-purple-400 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-white">
+                      🔔 {pendingCompletions.length} Project/Thesis Completion {pendingCompletions.length === 1 ? 'Request' : 'Requests'} Pending Approval
+                    </h3>
+                    <p className="text-purple-200 text-sm">
+                      Review and approve final student completions
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={() => navigate('/admin/completion-review')}
+                  size="sm"
+                  className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700"
+                >
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Review
+                </Button>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20 cursor-pointer hover:shadow-xl hover:shadow-blue-500/20 transition-all duration-300" onClick={() => navigate('/admin/students')}>
             <div className="flex items-center">
               <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
@@ -689,6 +734,18 @@ export default function AdminDashboard() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-orange-200">Proposals</p>
                 <p className="text-2xl font-bold text-white">{stats.proposals}</p>
+              </div>
+            </div>
+          </Card>
+          
+          <Card className="p-6 bg-white/10 backdrop-blur-xl border border-white/20 cursor-pointer hover:shadow-xl hover:shadow-emerald-500/20 transition-all duration-300" onClick={() => navigate('/admin/completion-review')}>
+            <div className="flex items-center">
+              <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg">
+                <CheckCircle className="w-6 h-6 text-white" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-emerald-200">Pending Completions</p>
+                <p className="text-2xl font-bold text-white">{stats.pendingCompletions}</p>
               </div>
             </div>
           </Card>

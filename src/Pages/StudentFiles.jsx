@@ -49,6 +49,27 @@ export default function StudentFiles() {
     return () => clearInterval(intervalId);
   }, []);
 
+  const handleDownload = async (fileUrl, fileName) => {
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('File downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast.error('Failed to download file');
+      // Fallback: open in new tab
+      window.open(fileUrl, '_blank');
+    }
+  };
+
   const loadData = async (user) => {
     setLoading(true);
     
@@ -222,14 +243,12 @@ export default function StudentFiles() {
                           </Badge>
                         </div>
                       </div>
-                      <a
-                        href={file.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={() => handleDownload(file.file_url, file.file_name)}
                         className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                       >
                         <Download className="w-5 h-5 text-slate-500" />
-                      </a>
+                      </button>
                     </div>
                   </Card>
                 </motion.div>

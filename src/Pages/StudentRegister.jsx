@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import AuthCard from '@/components/ui/AuthCard';
 import PageBackground from '@/components/ui/PageBackground';
 import { motion } from 'framer-motion';
-import { Loader2, Eye, EyeOff, ArrowRight, User, Mail, Lock, Building, IdCard, GraduationCap } from 'lucide-react';
+import { Loader2, Eye, EyeOff, ArrowRight, User, Mail, Lock, Building, IdCard, GraduationCap, Calendar } from 'lucide-react';
 
 export default function StudentRegister() {
   const navigate = useNavigate();
@@ -24,6 +24,8 @@ export default function StudentRegister() {
     full_name: '',
     email: '',
     department: '',
+    semester: '',
+    year: '',
     password: '',
     confirm_password: ''
   });
@@ -53,6 +55,24 @@ export default function StudentRegister() {
     const deptValidation = validateDepartment(formData.department);
     if (!deptValidation.valid) {
       toast.error(deptValidation.message);
+      return;
+    }
+
+    // Validate semester selection
+    if (!formData.semester) {
+      toast.error('Please select a semester');
+      return;
+    }
+
+    // Validate year selection
+    if (!formData.year) {
+      toast.error('Please enter an academic year');
+      return;
+    }
+
+    const yearNum = parseInt(formData.year);
+    if (isNaN(yearNum) || yearNum < 2000 || yearNum > 2100) {
+      toast.error('Please enter a valid year between 2000 and 2100');
       return;
     }
 
@@ -95,6 +115,8 @@ export default function StudentRegister() {
         full_name: formData.full_name,
         email: formData.email,
         department: formData.department,
+        semester: formData.semester,
+        year: String(formData.year),
         password_hash: hashedPassword,
         profile_photo: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(formData.full_name)}`,
         status: 'active',
@@ -215,6 +237,52 @@ export default function StudentRegister() {
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                     className="pl-12 h-12 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400/30"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="semester" className="text-white font-medium">Semester</Label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-300">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <select
+                    id="semester"
+                    value={formData.semester}
+                    onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
+                    className="pl-12 h-12 w-full rounded-xl bg-white/10 border border-white/20 text-white focus:border-blue-400 focus:ring-blue-400/30 appearance-none cursor-pointer"
+                    required
+                  >
+                    <option value="" disabled className="bg-slate-800 text-blue-200">Select Semester</option>
+                    <option value="Spring" className="bg-slate-800 text-white">Spring</option>
+                    <option value="Summer" className="bg-slate-800 text-white">Summer</option>
+                    <option value="Fall" className="bg-slate-800 text-white">Fall</option>
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <svg className="w-5 h-5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="year" className="text-white font-medium">Academic Year</Label>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-300">
+                    <GraduationCap className="w-5 h-5" />
+                  </div>
+                  <Input
+                    id="year"
+                    type="number"
+                    placeholder="e.g., 2025"
+                    value={formData.year}
+                    onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                    className="pl-12 h-12 rounded-xl bg-white/10 border-white/20 text-white placeholder:text-blue-200 focus:border-blue-400 focus:ring-blue-400/30"
+                    min="2000"
+                    max="2100"
                     required
                   />
                 </div>

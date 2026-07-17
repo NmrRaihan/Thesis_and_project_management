@@ -1,0 +1,23 @@
+{
+  "name": "DefenseRegistration",
+  "type": "object",
+  "properties": {
+    "defense_registration_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable or disable student access to thesis completion form"
+    },
+    "defense_message": {
+      "type": "string",
+      "default": "",
+      "description": "Message to show students when defense registration is disabled"
+    },
+    "updated_at": {
+      "type": "string"
+    },
+    "updated_by": {
+      "type": "string"
+    }
+  },
+  "required": ["defense_registration_enabled"]
+}

@@ -48,6 +48,16 @@ import AdminTeacherDetail from './Pages/AdminTeacherDetail.jsx';
 import AdminProposalManagement from './Pages/AdminProposalManagement.jsx';
 import AdminGroups from './Pages/AdminGroups.jsx';
 import AdminStudentGroupDetail from './Pages/AdminStudentGroupDetail.jsx';
+import ThesisCompletionRequest from './Pages/ThesisCompletionRequest.jsx';
+import TeacherCompletionReview from './Pages/TeacherCompletionReview.jsx';
+import AdminCompletionReview from './Pages/AdminCompletionReview.jsx';
+import AdminThesisCompleteList from './Pages/AdminThesisCompleteList.jsx';
+import AdminApprovedProposals from './Pages/AdminApprovedProposals.jsx';
+import AdminProjects from './Pages/AdminProjects.jsx';
+import AdminTheses from './Pages/AdminTheses.jsx';
+import AdminCompletedWork from './Pages/AdminCompletedWork.jsx';
+import RegistrationControl from './Pages/RegistrationControl.jsx';
+import DefenseRegistration from './Pages/DefenseRegistration.jsx';
 
 const AppRouter = () => (
   <BrowserRouter basename="/Thesis_and_project_management">
@@ -61,7 +71,7 @@ const AppRouter = () => (
       <Route path="/selectpartners" element={<SelectPartners />} />
       <Route path="/groupchat" element={<GroupChat />} />
       <Route path="/createproposal" element={<CreateProposal />} />
-      <Route path="/suggestedteachers" element={<SuggestedTeachers />} />
+      <Route path="/student/suggested-teachers" element={<SuggestedTeachers />} />
       <Route path="/studentrequests" element={<StudentRequests />} />
       <Route path="/studentmessages" element={<StudentMessages />} />
       <Route path="/studentmeetings" element={<StudentMeetings />} />
@@ -73,6 +83,7 @@ const AppRouter = () => (
       <Route path="/student/group-invitations" element={<GroupInvitations />} />
       <Route path="/student/create-group-proposal" element={<CreateGroupProposal />} />
       <Route path="/student/request-teachers" element={<RequestTeachers />} />
+      <Route path="/student/thesis-completion" element={<ThesisCompletionRequest />} />
       
       {/* Teacher Routes */}
       <Route path="/teacherlogin" element={<TeacherLogin />} />
@@ -85,6 +96,7 @@ const AppRouter = () => (
       <Route path="/mystudents" element={<MyStudents />} />
       <Route path="/progresstracker" element={<ProgressTracker />} />
       <Route path="/taskboard" element={<TaskBoard />} />
+      <Route path="/teacher/completion-review" element={<TeacherCompletionReview />} />
       <Route path="/admin/database" element={<DatabaseAdmin />} />
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
@@ -95,6 +107,14 @@ const AppRouter = () => (
       <Route path="/admin/groups" element={<AdminGroups />} />
       <Route path="/admin/proposals" element={<AdminProposalManagement />} />
       <Route path="/admin/groups/:groupId" element={<AdminStudentGroupDetail />} />
+      <Route path="/admin/completion-review" element={<AdminCompletionReview />} />
+      <Route path="/admin/thesis-complete" element={<AdminThesisCompleteList />} />
+      <Route path="/admin/approved-proposals" element={<AdminApprovedProposals />} />
+      <Route path="/admin/projects" element={<AdminProjects />} />
+      <Route path="/admin/theses" element={<AdminTheses />} />
+      <Route path="/admin/completed" element={<AdminCompletedWork />} />
+      <Route path="/admin/registration-control" element={<RegistrationControl />} />
+      <Route path="/admin/defense-registration" element={<DefenseRegistration />} />
     </Routes>
     <Toaster position="top-right" richColors expand={false} />
   </BrowserRouter>

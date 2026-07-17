@@ -23,6 +23,19 @@
     "department": {
       "type": "string"
     },
+    "semester": {
+      "type": "string",
+      "enum": [
+        "Spring",
+        "Summer",
+        "Fall"
+      ],
+      "description": "Academic semester (Tri-semester system)"
+    },
+    "year": {
+      "type": "string",
+      "description": "Academic year (e.g., 2025, 2026)"
+    },
     "group_id": {
       "type": "string",
       "description": "Reference to student group"
@@ -44,6 +57,8 @@
   "required": [
     "student_id",
     "password_hash",
-    "full_name"
+    "full_name",
+    "semester",
+    "year"
   ]
 }
